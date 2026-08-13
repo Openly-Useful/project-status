@@ -4,7 +4,7 @@
 !.env.example
 
 node_modules/
-dist/
+/dist/
 artifacts/
 packages/mcp/node_modules/
 packages/mcp/dist/
