@@ -132,10 +132,10 @@ function releaseGates(metadata) {
   return [
     {
       id: "license-selection",
-      status: licenseSelected ? "satisfied" : "pending_owner_decision",
+      status: licenseSelected ? "satisfied" : "pending_implementation",
       detail: licenseSelected
         ? "LICENSE is present."
-        : "Choose the legal license before public distribution; no license was selected automatically.",
+        : "Apache License 2.0 is selected, but the LICENSE copyright holder and complete third-party notice set must be implemented before public distribution.",
     },
     {
       id: "publisher-metadata",

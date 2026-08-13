@@ -111,7 +111,7 @@ test("release check separates distributable packages from owner publication deci
   const publisherGate = result.releaseGates.find((gate) => gate.id === "publisher-metadata");
   assert.ok(licenseGate);
   assert.ok(publisherGate);
-  if (!existsSync(join(root, "LICENSE"))) assert.equal(licenseGate.status, "pending_owner_decision");
+  if (!existsSync(join(root, "LICENSE"))) assert.equal(licenseGate.status, "pending_implementation");
   assert.equal(publisherGate.status, "pending_owner_decision");
   assert.equal(result.publishReady, false);
 });

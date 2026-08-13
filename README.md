@@ -118,11 +118,11 @@ The distribution version is recorded in `VERSION`, `skill/project-status/assets/
 
 Version `1.0.0` is package-ready but not automatically publication-ready. Before any public release, the owner must still:
 
-1. choose and add the intended legal `LICENSE`;
+1. implement the selected Apache License 2.0 `LICENSE` with the confirmed copyright holder and ship the complete third-party notice set;
 2. confirm the real publisher identity and public repository/homepage URLs;
 3. review the generated archives and checksums;
 4. explicitly authorize publishing or deployment.
 
-No license, public publisher URL, release upload, marketplace submission, or deployment is inferred by this repository.
+Apache License 2.0 is the selected project license, but no final copyright holder, license file, third-party notice bundle, public publisher URL, release upload, marketplace submission, or deployment is inferred by this repository.
 
 See [CHANGELOG.md](./CHANGELOG.md) for release history.
