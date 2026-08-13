@@ -1,0 +1,26 @@
+{
+  "author": {
+    "name": "Project Status Initiative"
+  },
+  "description": "Evidence-backed project readiness, provenance, monitoring, dashboard, and attachment workflows.",
+  "interface": {
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "category": "Productivity",
+    "defaultPrompt": [
+      "Audit this project's evidence-backed readiness.",
+      "Plan a production /status dashboard safely.",
+      "Verify status provenance without editing files."
+    ],
+    "developerName": "Project Status Initiative",
+    "displayName": "Project Status",
+    "longDescription": "Inspect and maintain a weighted project status manifest, generate a safe /status dashboard, verify provenance, run bounded live checks, and attach the portable skill across agent hosts.",
+    "shortDescription": "Evidence-backed readiness and live status"
+  },
+  "mcpServers": "./.mcp.json",
+  "name": "project-status",
+  "skills": "./skills/",
+  "version": "1.0.0"
+}

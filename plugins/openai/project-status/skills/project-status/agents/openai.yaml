@@ -1,0 +1,6 @@
+interface:
+  display_name: "Project Status"
+  short_description: "Audit and maintain project status safely"
+  default_prompt: "Use $project-status to validate this project's evidence-backed readiness and report blockers without making external changes."
+policy:
+  allow_implicit_invocation: true

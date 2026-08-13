@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "route": "/status",
+  "initiative": {
+    "id": "example-project",
+    "name": "Example project",
+    "release": "proposal-0",
+    "state": "proposal"
+  },
+  "source": {
+    "repository": null,
+    "commit": null,
+    "deploymentId": null,
+    "buildId": null,
+    "manifestSha256": null
+  },
+  "audit": {
+    "auditId": "initialized-proposal",
+    "state": "proposal",
+    "evidenceAsOf": "2026-08-12T12:00:00.000Z",
+    "verifiedAt": null,
+    "nextDueAt": null,
+    "staleAfterSeconds": 604800
+  },
+  "totalWeight": 100,
+  "phases": [
+    {
+      "id": "delivery",
+      "name": "Delivery",
+      "summary": "Replace this proposal with the project's evidence-backed delivery plan.",
+      "weight": 100,
+      "tasks": [
+        {
+          "id": "replace-proposal",
+          "name": "Replace the initialized proposal",
+          "summary": "Define weighted tasks and attach qualifying evidence before awarding any credit.",
+          "status": "not_started",
+          "weight": 100,
+          "earnedWeight": 0,
+          "remainingHours": {
+            "min": 1,
+            "max": 2
+          },
+          "recurring": false,
+          "deferred": false,
+          "owner": {
+            "type": "role",
+            "id": "initiative-owner",
+            "label": "Initiative owner"
+          },
+          "nextAction": "Replace this initialized proposal with audited tasks, estimates, owners, and evidence requirements.",
+          "evidenceRequirement": {
+            "minimumTier": "validated_local",
+            "minCount": 1
+          },
+          "evidenceRefs": [],
+          "gateRefs": []
+        }
+      ]
+    }
+  ],
+  "evidence": [],
+  "gates": [],
+  "dependencies": []
+}

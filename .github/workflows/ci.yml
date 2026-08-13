@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install application dependencies
+        run: npm ci
+
+      - name: Install optional MCP dependencies
+        if: ${{ hashFiles('packages/mcp/package-lock.json') != '' }}
+        run: npm ci --prefix packages/mcp
+
+      - name: Build optional MCP companion
+        if: ${{ hashFiles('packages/mcp/package.json') != '' }}
+        run: npm run build --prefix packages/mcp
+
+      - name: Test optional MCP companion
+        if: ${{ hashFiles('packages/mcp/package.json') != '' }}
+        run: npm test --prefix packages/mcp --if-present
+
+      - name: Verify generated plugin wrappers
+        run: node scripts/release-sync.mjs check
+
+      - name: Build application and Sites handoff
+        run: npm run build
+
+      - name: Run full test suite including package reproducibility
+        run: node --test tests/*.test.mjs
+
+      - name: Validate release and plugin metadata
+        run: node scripts/release-check.mjs
+
+      - name: Build and verify distribution artifacts
+        shell: bash
+        run: |
+          artifact_dir="$(mktemp -d)"
+          node scripts/package-skill.mjs build --output "$artifact_dir"
+          node scripts/package-skill.mjs verify --output "$artifact_dir"

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <title>Project status</title>
+    <link rel="stylesheet" href="./status.css">
+    <script type="module" src="./status.js"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <p class="eyebrow">Evidence-backed readiness</p>
+        <h1 id="project-name">Project status</h1>
+        <p id="readiness-question" class="question">Loading the public status projection…</p>
+        <div class="score-row">
+          <p class="score" aria-live="polite"><strong id="score">—</strong><span>/100</span></p>
+          <p id="audit-state" class="pill">Audit unknown</p>
+        </div>
+        <div id="overall-progress" class="progress" role="progressbar" aria-label="Overall readiness" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Not loaded">
+          <span id="overall-fill"></span>
+        </div>
+      </header>
+
+      <section aria-labelledby="phase-heading">
+        <div class="section-heading">
+          <h2 id="phase-heading">Readiness by phase</h2>
+          <p>Weighted scope only; live health does not change these values.</p>
+        </div>
+        <div id="phases" class="phase-grid"></div>
+      </section>
+
+      <section class="facts" aria-label="Delivery facts">
+        <article><h2>Hands-on</h2><p id="hands-on">—</p></article>
+        <article><h2>Soak</h2><p id="soak">—</p></article>
+        <article><h2>Deferred</h2><p id="deferred">—</p></article>
+        <article><h2>External gates</h2><p id="gates">—</p></article>
+      </section>
+
+      <section class="split">
+        <article aria-labelledby="blocker-heading">
+          <h2 id="blocker-heading">Blockers</h2>
+          <ul id="blockers"><li>Loading…</li></ul>
+        </article>
+        <article aria-labelledby="health-heading">
+          <h2 id="health-heading">Live health</h2>
+          <p id="health">Not observed by this static projection.</p>
+          <p class="muted">A browser refresh is not monitoring.</p>
+        </article>
+      </section>
+
+      <footer>
+        <p>Manifest <code id="manifest-digest">unknown</code></p>
+        <p id="source-note">Public projection generated from the weighted manifest.</p>
+      </footer>
+    </main>
+  </body>
+</html>

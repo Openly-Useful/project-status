@@ -1,0 +1,808 @@
+{
+  "standard": "WCAG 2.2 AA local engineering audit",
+  "generatedAt": "2026-08-12T22:22:18.335Z",
+  "baseUrl": "http://127.0.0.1:5174/status",
+  "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36",
+  "scope": {
+    "automated": [
+      "semantic names and landmarks",
+      "text contrast",
+      "44x44 design target policy",
+      "keyboard focus trap and return",
+      "responsive reflow",
+      "reduced motion"
+    ],
+    "manualStillRequired": [
+      "VoiceOver/NVDA announcement quality",
+      "high-contrast OS modes on physical devices",
+      "cognitive usability with representative users"
+    ]
+  },
+  "variants": {
+    "light-desktop": {
+      "name": "light-desktop",
+      "audit": {
+        "viewport": {
+          "width": 1440,
+          "height": 1024,
+          "devicePixelRatio": 1
+        },
+        "reflow": {
+          "documentClientWidth": 1440,
+          "documentScrollWidth": 1440,
+          "bodyClientWidth": 1440,
+          "bodyScrollWidth": 1440,
+          "horizontalOverflow": false
+        },
+        "landmarks": {
+          "main": 1,
+          "navigation": 1,
+          "header": 1,
+          "footer": 2
+        },
+        "headingOrder": [
+          {
+            "level": 1,
+            "text": "Evidence-backed project progress"
+          }
+        ],
+        "visibleDialogs": [],
+        "unnamedControls": [],
+        "undersizedTargets": [],
+        "contrastFailures": [],
+        "tokens": {
+          "accentOnSurface": 5.52,
+          "warningOnSurface": 6.16,
+          "dangerOnSurface": 5.97,
+          "mutedOnSurface": 5.14,
+          "focusOnSurface": 6.09,
+          "unstartedOnBar": 3.15
+        }
+      },
+      "ax": {
+        "relevantNodeCount": 22,
+        "dialogs": [],
+        "missingNames": []
+      }
+    },
+    "dark-desktop": {
+      "name": "dark-desktop",
+      "audit": {
+        "viewport": {
+          "width": 1440,
+          "height": 1024,
+          "devicePixelRatio": 1
+        },
+        "reflow": {
+          "documentClientWidth": 1440,
+          "documentScrollWidth": 1440,
+          "bodyClientWidth": 1440,
+          "bodyScrollWidth": 1440,
+          "horizontalOverflow": false
+        },
+        "landmarks": {
+          "main": 1,
+          "navigation": 1,
+          "header": 1,
+          "footer": 2
+        },
+        "headingOrder": [
+          {
+            "level": 1,
+            "text": "Evidence-backed project progress"
+          }
+        ],
+        "visibleDialogs": [],
+        "unnamedControls": [],
+        "undersizedTargets": [],
+        "contrastFailures": [],
+        "tokens": {
+          "accentOnSurface": 9.76,
+          "warningOnSurface": 8.32,
+          "dangerOnSurface": 6.81,
+          "mutedOnSurface": 7.09,
+          "focusOnSurface": 9.5,
+          "unstartedOnBar": 3.4
+        }
+      },
+      "ax": {
+        "relevantNodeCount": 22,
+        "dialogs": [],
+        "missingNames": []
+      }
+    },
+    "light-mobile": {
+      "name": "light-mobile",
+      "audit": {
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 1
+        },
+        "reflow": {
+          "documentClientWidth": 390,
+          "documentScrollWidth": 390,
+          "bodyClientWidth": 390,
+          "bodyScrollWidth": 390,
+          "horizontalOverflow": false
+        },
+        "landmarks": {
+          "main": 1,
+          "navigation": 1,
+          "header": 1,
+          "footer": 2
+        },
+        "headingOrder": [
+          {
+            "level": 1,
+            "text": "Evidence-backed project progress"
+          }
+        ],
+        "visibleDialogs": [],
+        "unnamedControls": [],
+        "undersizedTargets": [],
+        "contrastFailures": [],
+        "tokens": {
+          "accentOnSurface": 5.52,
+          "warningOnSurface": 6.16,
+          "dangerOnSurface": 5.97,
+          "mutedOnSurface": 5.14,
+          "focusOnSurface": 6.09,
+          "unstartedOnBar": 3.15
+        }
+      },
+      "ax": {
+        "relevantNodeCount": 20,
+        "dialogs": [],
+        "missingNames": []
+      },
+      "dialogAudit": {
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 1
+        },
+        "reflow": {
+          "documentClientWidth": 390,
+          "documentScrollWidth": 390,
+          "bodyClientWidth": 390,
+          "bodyScrollWidth": 390,
+          "horizontalOverflow": false
+        },
+        "landmarks": {
+          "main": 1,
+          "navigation": 1,
+          "header": 2,
+          "footer": 2
+        },
+        "headingOrder": [
+          {
+            "level": 2,
+            "text": "Attach skill"
+          }
+        ],
+        "visibleDialogs": [
+          {
+            "label": "section-dialog-title"
+          }
+        ],
+        "unnamedControls": [],
+        "undersizedTargets": [],
+        "contrastFailures": [],
+        "tokens": {
+          "accentOnSurface": 5.52,
+          "warningOnSurface": 6.16,
+          "dangerOnSurface": 5.97,
+          "mutedOnSurface": 5.14,
+          "focusOnSurface": 6.09,
+          "unstartedOnBar": 3.15
+        }
+      },
+      "dialogAx": {
+        "relevantNodeCount": 6,
+        "dialogs": [
+          "Attach skill"
+        ],
+        "missingNames": []
+      }
+    },
+    "dark-mobile": {
+      "name": "dark-mobile",
+      "audit": {
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 1
+        },
+        "reflow": {
+          "documentClientWidth": 390,
+          "documentScrollWidth": 390,
+          "bodyClientWidth": 390,
+          "bodyScrollWidth": 390,
+          "horizontalOverflow": false
+        },
+        "landmarks": {
+          "main": 1,
+          "navigation": 1,
+          "header": 1,
+          "footer": 2
+        },
+        "headingOrder": [
+          {
+            "level": 1,
+            "text": "Evidence-backed project progress"
+          }
+        ],
+        "visibleDialogs": [],
+        "unnamedControls": [],
+        "undersizedTargets": [],
+        "contrastFailures": [],
+        "tokens": {
+          "accentOnSurface": 9.76,
+          "warningOnSurface": 8.32,
+          "dangerOnSurface": 6.81,
+          "mutedOnSurface": 7.09,
+          "focusOnSurface": 9.5,
+          "unstartedOnBar": 3.4
+        }
+      },
+      "ax": {
+        "relevantNodeCount": 20,
+        "dialogs": [],
+        "missingNames": []
+      },
+      "dialogAudit": {
+        "viewport": {
+          "width": 390,
+          "height": 844,
+          "devicePixelRatio": 1
+        },
+        "reflow": {
+          "documentClientWidth": 390,
+          "documentScrollWidth": 390,
+          "bodyClientWidth": 390,
+          "bodyScrollWidth": 390,
+          "horizontalOverflow": false
+        },
+        "landmarks": {
+          "main": 1,
+          "navigation": 1,
+          "header": 2,
+          "footer": 2
+        },
+        "headingOrder": [
+          {
+            "level": 2,
+            "text": "Attach skill"
+          }
+        ],
+        "visibleDialogs": [
+          {
+            "label": "section-dialog-title"
+          }
+        ],
+        "unnamedControls": [],
+        "undersizedTargets": [],
+        "contrastFailures": [],
+        "tokens": {
+          "accentOnSurface": 9.76,
+          "warningOnSurface": 8.32,
+          "dangerOnSurface": 6.81,
+          "mutedOnSurface": 7.09,
+          "focusOnSurface": 9.5,
+          "unstartedOnBar": 3.4
+        }
+      },
+      "dialogAx": {
+        "relevantNodeCount": 6,
+        "dialogs": [
+          "Attach skill"
+        ],
+        "missingNames": []
+      }
+    },
+    "light-200-percent-reflow": {
+      "name": "light-200-percent-reflow",
+      "audit": {
+        "viewport": {
+          "width": 720,
+          "height": 512,
+          "devicePixelRatio": 1
+        },
+        "reflow": {
+          "documentClientWidth": 720,
+          "documentScrollWidth": 720,
+          "bodyClientWidth": 720,
+          "bodyScrollWidth": 720,
+          "horizontalOverflow": false
+        },
+        "landmarks": {
+          "main": 1,
+          "navigation": 1,
+          "header": 1,
+          "footer": 2
+        },
+        "headingOrder": [
+          {
+            "level": 1,
+            "text": "Evidence-backed project progress"
+          }
+        ],
+        "visibleDialogs": [],
+        "unnamedControls": [],
+        "undersizedTargets": [],
+        "contrastFailures": [],
+        "tokens": {
+          "accentOnSurface": 5.52,
+          "warningOnSurface": 6.16,
+          "dangerOnSurface": 5.97,
+          "mutedOnSurface": 5.14,
+          "focusOnSurface": 6.09,
+          "unstartedOnBar": 3.15
+        }
+      },
+      "ax": {
+        "relevantNodeCount": 20,
+        "dialogs": [],
+        "missingNames": []
+      },
+      "dialogAudit": {
+        "viewport": {
+          "width": 720,
+          "height": 512,
+          "devicePixelRatio": 1
+        },
+        "reflow": {
+          "documentClientWidth": 720,
+          "documentScrollWidth": 720,
+          "bodyClientWidth": 720,
+          "bodyScrollWidth": 720,
+          "horizontalOverflow": false
+        },
+        "landmarks": {
+          "main": 1,
+          "navigation": 1,
+          "header": 2,
+          "footer": 2
+        },
+        "headingOrder": [
+          {
+            "level": 2,
+            "text": "Attach skill"
+          }
+        ],
+        "visibleDialogs": [
+          {
+            "label": "section-dialog-title"
+          }
+        ],
+        "unnamedControls": [],
+        "undersizedTargets": [],
+        "contrastFailures": [],
+        "tokens": {
+          "accentOnSurface": 5.52,
+          "warningOnSurface": 6.16,
+          "dangerOnSurface": 5.97,
+          "mutedOnSurface": 5.14,
+          "focusOnSurface": 6.09,
+          "unstartedOnBar": 3.15
+        }
+      },
+      "dialogAx": {
+        "relevantNodeCount": 6,
+        "dialogs": [
+          "Attach skill"
+        ],
+        "missingNames": []
+      }
+    },
+    "dark-200-percent-reflow": {
+      "name": "dark-200-percent-reflow",
+      "audit": {
+        "viewport": {
+          "width": 720,
+          "height": 512,
+          "devicePixelRatio": 1
+        },
+        "reflow": {
+          "documentClientWidth": 720,
+          "documentScrollWidth": 720,
+          "bodyClientWidth": 720,
+          "bodyScrollWidth": 720,
+          "horizontalOverflow": false
+        },
+        "landmarks": {
+          "main": 1,
+          "navigation": 1,
+          "header": 1,
+          "footer": 2
+        },
+        "headingOrder": [
+          {
+            "level": 1,
+            "text": "Evidence-backed project progress"
+          }
+        ],
+        "visibleDialogs": [],
+        "unnamedControls": [],
+        "undersizedTargets": [],
+        "contrastFailures": [],
+        "tokens": {
+          "accentOnSurface": 9.76,
+          "warningOnSurface": 8.32,
+          "dangerOnSurface": 6.81,
+          "mutedOnSurface": 7.09,
+          "focusOnSurface": 9.5,
+          "unstartedOnBar": 3.4
+        }
+      },
+      "ax": {
+        "relevantNodeCount": 20,
+        "dialogs": [],
+        "missingNames": []
+      },
+      "dialogAudit": {
+        "viewport": {
+          "width": 720,
+          "height": 512,
+          "devicePixelRatio": 1
+        },
+        "reflow": {
+          "documentClientWidth": 720,
+          "documentScrollWidth": 720,
+          "bodyClientWidth": 720,
+          "bodyScrollWidth": 720,
+          "horizontalOverflow": false
+        },
+        "landmarks": {
+          "main": 1,
+          "navigation": 1,
+          "header": 2,
+          "footer": 2
+        },
+        "headingOrder": [
+          {
+            "level": 2,
+            "text": "Attach skill"
+          }
+        ],
+        "visibleDialogs": [
+          {
+            "label": "section-dialog-title"
+          }
+        ],
+        "unnamedControls": [],
+        "undersizedTargets": [],
+        "contrastFailures": [],
+        "tokens": {
+          "accentOnSurface": 9.76,
+          "warningOnSurface": 8.32,
+          "dangerOnSurface": 6.81,
+          "mutedOnSurface": 7.09,
+          "focusOnSurface": 9.5,
+          "unstartedOnBar": 3.4
+        }
+      },
+      "dialogAx": {
+        "relevantNodeCount": 6,
+        "dialogs": [
+          "Attach skill"
+        ],
+        "missingNames": []
+      }
+    }
+  },
+  "keyboard": {
+    "command": {
+      "trapped": true,
+      "cycle": [
+        {
+          "tag": "button",
+          "className": "",
+          "label": "Open Readiness #readiness",
+          "inCommandDialog": true,
+          "inSectionDialog": false
+        },
+        {
+          "tag": "button",
+          "className": "",
+          "label": "Open Evidence #evidence",
+          "inCommandDialog": true,
+          "inSectionDialog": false
+        },
+        {
+          "tag": "button",
+          "className": "",
+          "label": "Open Monitoring #monitoring",
+          "inCommandDialog": true,
+          "inSectionDialog": false
+        },
+        {
+          "tag": "button",
+          "className": "",
+          "label": "Open Runs #runs",
+          "inCommandDialog": true,
+          "inSectionDialog": false
+        },
+        {
+          "tag": "button",
+          "className": "",
+          "label": "Open Blockers #blockers",
+          "inCommandDialog": true,
+          "inSectionDialog": false
+        },
+        {
+          "tag": "button",
+          "className": "",
+          "label": "Open Packages #source",
+          "inCommandDialog": true,
+          "inSectionDialog": false
+        },
+        {
+          "tag": "button",
+          "className": "",
+          "label": "Open Attach skill #install",
+          "inCommandDialog": true,
+          "inSectionDialog": false
+        },
+        {
+          "tag": "input",
+          "className": "",
+          "label": "Open a project-status section…",
+          "inCommandDialog": true,
+          "inSectionDialog": false
+        },
+        {
+          "tag": "button",
+          "className": "",
+          "label": "Open Readiness #readiness",
+          "inCommandDialog": true,
+          "inSectionDialog": false
+        },
+        {
+          "tag": "button",
+          "className": "",
+          "label": "Open Evidence #evidence",
+          "inCommandDialog": true,
+          "inSectionDialog": false
+        },
+        {
+          "tag": "button",
+          "className": "",
+          "label": "Open Monitoring #monitoring",
+          "inCommandDialog": true,
+          "inSectionDialog": false
+        },
+        {
+          "tag": "button",
+          "className": "",
+          "label": "Open Runs #runs",
+          "inCommandDialog": true,
+          "inSectionDialog": false
+        }
+      ],
+      "trigger": {
+        "tag": "button",
+        "className": "search-button",
+        "label": "Search or run a command",
+        "inCommandDialog": false,
+        "inSectionDialog": false
+      },
+      "initial": {
+        "tag": "input",
+        "className": "",
+        "label": "Open a project-status section…",
+        "inCommandDialog": true,
+        "inSectionDialog": false
+      },
+      "reverse": {
+        "tag": "button",
+        "className": "",
+        "label": "Open Attach skill #install",
+        "inCommandDialog": true,
+        "inSectionDialog": false
+      },
+      "returned": {
+        "tag": "button",
+        "className": "search-button",
+        "label": "Search or run a command",
+        "inCommandDialog": false,
+        "inSectionDialog": false
+      },
+      "shortcutOpened": true,
+      "emptyState": "No matching sections."
+    },
+    "section": {
+      "trapped": true,
+      "cycle": [
+        {
+          "tag": "button",
+          "className": "icon-button",
+          "label": "Close Readiness",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "icon-button",
+          "label": "Close Readiness",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "icon-button",
+          "label": "Close Readiness",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "icon-button",
+          "label": "Close Readiness",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "icon-button",
+          "label": "Close Readiness",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "icon-button",
+          "label": "Close Readiness",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        }
+      ],
+      "trigger": {
+        "tag": "button",
+        "className": "summary-tile",
+        "label": "Readiness 3 phases Weighted plan and dependencies. Open Readiness",
+        "inCommandDialog": false,
+        "inSectionDialog": false
+      },
+      "initial": {
+        "tag": "button",
+        "className": "icon-button",
+        "label": "Close Readiness",
+        "inCommandDialog": false,
+        "inSectionDialog": true
+      },
+      "reverse": {
+        "tag": "button",
+        "className": "icon-button",
+        "label": "Close Readiness",
+        "inCommandDialog": false,
+        "inSectionDialog": true
+      },
+      "returned": {
+        "tag": "button",
+        "className": "summary-tile",
+        "label": "Readiness 3 phases Weighted plan and dependencies. Open Readiness",
+        "inCommandDialog": false,
+        "inSectionDialog": false
+      }
+    },
+    "install": {
+      "trapped": true,
+      "cycle": [
+        {
+          "tag": "button",
+          "className": "icon-button",
+          "label": "Close Attach skill",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "copy-button",
+          "label": "Copy to clipboard",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "copy-button",
+          "label": "Copy to clipboard",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "copy-button",
+          "label": "Copy to clipboard",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "copy-button",
+          "label": "Copy to clipboard",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "icon-button",
+          "label": "Close Attach skill",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "copy-button",
+          "label": "Copy to clipboard",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "copy-button",
+          "label": "Copy to clipboard",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "copy-button",
+          "label": "Copy to clipboard",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "copy-button",
+          "label": "Copy to clipboard",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "icon-button",
+          "label": "Close Attach skill",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        },
+        {
+          "tag": "button",
+          "className": "copy-button",
+          "label": "Copy to clipboard",
+          "inCommandDialog": false,
+          "inSectionDialog": true
+        }
+      ],
+      "trigger": {
+        "tag": "button",
+        "className": "attach-button",
+        "label": "Attach skill",
+        "inCommandDialog": false,
+        "inSectionDialog": false
+      },
+      "reverse": {
+        "tag": "button",
+        "className": "copy-button",
+        "label": "Copy to clipboard",
+        "inCommandDialog": false,
+        "inSectionDialog": true
+      },
+      "targets": [],
+      "returned": {
+        "tag": "button",
+        "className": "attach-button",
+        "label": "Attach skill",
+        "inCommandDialog": false,
+        "inSectionDialog": false
+      }
+    }
+  },
+  "reducedMotion": {
+    "tileTransitionDuration": "1e-05s",
+    "drawerAnimationDuration": "1e-05s"
+  },
+  "acceptanceFailures": [],
+  "localAutomatedAcceptance": true
+}

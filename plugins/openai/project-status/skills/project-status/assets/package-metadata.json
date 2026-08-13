@@ -1,0 +1,26 @@
+{
+  "name": "project-status",
+  "version": "1.0.0",
+  "description": "Evidence-backed project readiness, provenance, monitoring, dashboard, and attachment workflows.",
+  "author": {
+    "name": "Project Status Initiative"
+  },
+  "openai": {
+    "interface": {
+      "displayName": "Project Status",
+      "shortDescription": "Evidence-backed readiness and live status",
+      "longDescription": "Inspect and maintain a weighted project status manifest, generate a safe /status dashboard, verify provenance, run bounded live checks, and attach the portable skill across agent hosts.",
+      "developerName": "Project Status Initiative",
+      "category": "Productivity",
+      "capabilities": ["Read", "Write"],
+      "defaultPrompt": [
+        "Audit this project's evidence-backed readiness.",
+        "Plan a production /status dashboard safely.",
+        "Verify status provenance without editing files."
+      ]
+    }
+  },
+  "claude": {
+    "description": "Evidence-backed project status workflows for readiness, provenance, monitoring, dashboards, and repository attachment."
+  }
+}

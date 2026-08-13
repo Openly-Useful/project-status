@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "receiptType": "project_status_local_release_verification",
+  "release": "1.0.0-local",
+  "capturedAt": "2026-08-12T21:58:26.000Z",
+  "environment": {
+    "runtime": "node",
+    "packageVersion": "1.0.0",
+    "sourceBinding": "unbound-local-tree"
+  },
+  "verification": {
+    "command": "npm test",
+    "result": "passed",
+    "unitTests": {
+      "passed": 75,
+      "failed": 0,
+      "skippedBuildArtifactTest": 1
+    },
+    "buildTests": {
+      "passed": 6,
+      "failed": 0
+    },
+    "build": {
+      "result": "passed",
+      "requiredSitesArtifactsPrepared": true
+    }
+  },
+  "acceptedLocalOutcomes": [
+    {
+      "taskId": "schema-runtime-validator",
+      "credit": 9,
+      "basis": "Strict core and portable-schema parity, adversarial structural and semantic fixtures, injected-clock checks, and full local test pass."
+    },
+    {
+      "taskId": "structured-evidence-dag",
+      "credit": 9,
+      "basis": "Typed evidence, reciprocal gates, dependency DAG, score ledger rules, canonical digesting, public redaction, and provenance verification are locally tested."
+    },
+    {
+      "taskId": "durable-history-alerting",
+      "credit": 3,
+      "basis": "Append-only fsynced JSONL history, consecutive failures, state transitions, and recovery are locally tested; acknowledgement, escalation, notifications, and a scheduled runtime remain absent."
+    },
+    {
+      "taskId": "status-api-contracts",
+      "credit": 8,
+      "basis": "Versioned manifest and persisted-monitor endpoints are separated, allowlisted, cache-aware, deterministic under injected time, and contract-tested."
+    },
+    {
+      "taskId": "freshness-degradation",
+      "credit": 7,
+      "basis": "Last attempt, last success/failure, next due, cache age, stale/recorded state, failure counts, and environment identity are exposed and tested with injected clocks."
+    },
+    {
+      "taskId": "dashboard-implementation",
+      "credit": 8,
+      "basis": "The built dashboard consumes the sanitized public projection and separate monitor API, supports overview-to-drawer navigation, deep links, command navigation, and explicit loading/fallback and stale/unknown states."
+    }
+  ],
+  "withheldCredit": [
+    {
+      "taskId": "source-deployment-binding",
+      "reason": "No canonical repository, full commit, clean-tree proof, or deployment binding is recorded."
+    },
+    {
+      "taskId": "scheduled-probe-runner",
+      "reason": "A bounded runner exists, but no viewer-independent scheduled runtime is provisioned or evidenced."
+    },
+    {
+      "taskId": "durable-history-alerting",
+      "reason": "Four points remain withheld for acknowledgements, escalation, notification delivery, and end-to-end scheduled alert/recovery evidence."
+    },
+    {
+      "taskId": "wcag-responsive-remediation",
+      "reason": "No complete automated and manual WCAG 2.2 AA desktop/mobile acceptance evidence is retained."
+    },
+    {
+      "taskId": "automated-test-gates",
+      "reason": "The local suite passes, but no provenance-linked CI run enforcing the full required matrix is retained."
+    },
+    {
+      "taskId": "production-deploy-smoke",
+      "reason": "No production target, deployment, external smoke test, or deployed-source equality proof exists."
+    }
+  ]
+}

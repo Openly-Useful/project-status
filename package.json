@@ -1,0 +1,26 @@
+{
+  "name": "project-status-initiative",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/prepare-sites-build.mjs",
+    "preview": "vite preview",
+    "test": "npm run test:unit && npm run test:build",
+    "test:unit": "PROJECT_STATUS_SKIP_BUILD_ARTIFACT_TEST=1 node --test tests/*.test.mjs",
+    "test:build": "npm run build && node --test tests/sites-worker.test.mjs",
+    "test:sites": "node --test tests/sites-worker.test.mjs",
+    "status:validate": "node skill/project-status/scripts/status.mjs validate .project-status/manifest.json",
+    "status:summary": "node skill/project-status/scripts/status.mjs summary .project-status/manifest.json"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@phosphor-icons/react": "^2.1.10",
+    "@vitejs/plugin-react": "5.0.4",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "vite": "6.4.3"
+  }
+}

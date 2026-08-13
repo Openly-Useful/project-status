@@ -1,0 +1,20 @@
+{
+  "interface": {
+    "displayName": "Project Status Initiative"
+  },
+  "name": "project-status-initiative",
+  "plugins": [
+    {
+      "category": "Productivity",
+      "name": "project-status",
+      "policy": {
+        "authentication": "ON_INSTALL",
+        "installation": "AVAILABLE"
+      },
+      "source": {
+        "path": "./plugins/openai/project-status",
+        "source": "local"
+      }
+    }
+  ]
+}

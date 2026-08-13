@@ -1,0 +1,10 @@
+{
+  "author": {
+    "name": "Project Status Initiative"
+  },
+  "description": "Evidence-backed project status workflows for readiness, provenance, monitoring, dashboards, and repository attachment.",
+  "mcpServers": "./.mcp.json",
+  "name": "project-status",
+  "skills": "./skills/",
+  "version": "1.0.0"
+}

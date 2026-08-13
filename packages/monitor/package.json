@@ -1,0 +1,13 @@
+{
+  "name": "@project-status/monitor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": "./index.mjs",
+  "bin": {
+    "project-status-monitor": "./cli.mjs"
+  }
+}

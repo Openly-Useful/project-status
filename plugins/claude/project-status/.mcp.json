@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "project-status": {
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/mcp/dist/index.js"
+      ],
+      "command": "node",
+      "cwd": "${CLAUDE_PROJECT_DIR}"
+    }
+  }
+}

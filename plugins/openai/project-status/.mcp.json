@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "project-status": {
+      "args": [
+        "./mcp/dist/index.js"
+      ],
+      "command": "node",
+      "cwd": "."
+    }
+  }
+}
