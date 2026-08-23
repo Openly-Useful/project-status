@@ -829,7 +829,7 @@ export function createProjectStatusServer(options: ProjectStatusServerOptions = 
   const server = new McpServer(
     {
       name: "project-status-mcp-server",
-      version: "1.2.0",
+      version: "1.2.1",
       description: "Read-only access to validated Project Status readiness and optional local activity.",
     },
     {

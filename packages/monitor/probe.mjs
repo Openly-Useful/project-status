@@ -188,7 +188,7 @@ export async function probeHttpTarget(rawTarget, dependencies = {}) {
         method: target.method,
         headers: {
           accept: "*/*",
-          "user-agent": "project-status-monitor/1.2.0",
+          "user-agent": "project-status-monitor/1.2.1",
         },
         redirect: "manual",
         signal: controller.signal,
