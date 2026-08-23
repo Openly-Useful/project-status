@@ -15,10 +15,12 @@ or ownership transfer to Openly Useful or to the planned Openly Useful LLC is
 required or represented by this repository. Current open-source publication is
 founder-authorized.
 
-Openly Useful is the publisher and developer brand. Openly Useful LLC remains
-formation-pending and must not be described as formed, active, or as the owner
-or operator. A future LLC may publish, operate, and license the project only
-under separately documented founder authorization after formation.
+Openly Useful is the publisher and developer brand and is currently operated by
+the individual founder. The founder-owner directly authorizes source and npm
+package publication while formation is pending. Openly Useful LLC remains
+formation-pending and must not be described as formed, active, as the current
+operator, or as the owner. A future LLC may later publish, operate, and license
+the project under separately documented founder authorization.
 
 The canonical public repository target for both products in release 1.2.0 is
 <https://github.com/Openly-Useful/project-status>. Product packages, MCP Registry

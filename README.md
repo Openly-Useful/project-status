@@ -107,7 +107,7 @@ The `packages/mcp` commands apply only when that optional package is present. `n
 - `dist/server/index.js`
 - `dist/.openai/hosting.json`
 
-`scripts/release-check.mjs` validates wrapper drift, version agreement, host-specific marketplace and manifest shapes, the MCP bundle boundary, package safety, changelog coverage, and deterministic archive plans. It reports public-publication gates separately from repository distribution readiness. Both publishable MCP packages also run `scripts/assert-publish-ready.mjs` at the `prepublishOnly` boundary, so `npm publish` fails closed until formation, authorization, namespace verification, live policy verification, and blocker clearance are all recorded. The test suite also extracts both plugin archives into isolated temporary directories and performs a pinned MCP handshake plus readiness and activity tool calls without installing dependencies.
+`scripts/release-check.mjs` validates wrapper drift, version agreement, host-specific marketplace and manifest shapes, the MCP bundle boundary, package safety, changelog coverage, deterministic archive plans, package identities, namespaces, public-policy files, and founder publication authorization. Both publishable MCP packages run `scripts/assert-publish-ready.mjs` at the `prepublishOnly` boundary. npm publication is founder-authorized while LLC formation remains pending; the registry still enforces account authentication at the actual publish request, and provider marketplace review is a separate workflow that does not block npm. The test suite also extracts both plugin archives into isolated temporary directories and performs a pinned MCP handshake plus readiness and activity tool calls without installing dependencies.
 
 Third-party notices are generated from the pinned runtime dependency graphs rather than the full development toolchain:
 
@@ -187,15 +187,19 @@ The distribution version is recorded in `VERSION`, both canonical component meta
 
 `publisher/publisher.json` is the repository mirror/consumer of <https://openlyuseful.org/publisher/manifest.json>. Openly Useful is the publisher/developer brand. Openly Useful LLC is the planned publisher, operator, and licensee, but remains formation-pending and must not be described as already formed. The `.org` identity is the canonical open-source, publisher, policy, security, and support surface; `.com` is the studio/commercial identity. Component metadata points to the canonical public <https://github.com/Openly-Useful/project-status> repository and <https://openlyuseful.org/support>.
 
-RunGlance was solely authored by and remains personally owned by the founder. Current open-source publication is founder-authorized. No IP assignment, ownership transfer, or ownership verification is required for activation; the future LLC can publish, operate, and license RunGlance after formation and after its founder authorization is documented, without becoming the copyright owner.
+RunGlance was solely authored by and remains personally owned by the founder. Openly Useful is currently operated by the individual founder, who directly authorizes open-source and npm package publication while LLC formation remains pending. No IP assignment, ownership transfer, or ownership verification is required; a future LLC can later publish, operate, and license RunGlance under documented founder authorization without becoming the copyright owner.
 
-Local distribution readiness and public activation are separate. `distributionReady` may be true when source, generated wrappers, license/notices, policies, metadata, and deterministic packages validate. While the publisher record remains `formation-pending`, `publishReady` must remain false. Public activation still requires:
+Local distribution readiness and npm package readiness remain separate signals. `distributionReady` covers source, generated wrappers, license/notices, policies, metadata, and deterministic packages. `publishReady` additionally requires:
 
-1. Openly Useful LLC formation and documentation of the founder's authorization for its publishing role;
-2. anonymous reachability checks for the public repository and policy/support URLs;
-3. provider business/developer verification and domain/namespace authentication;
-4. review of generated archives and checksums from the exact release commit; and
-5. separate authorization for each package publication, registry entry, marketplace submission, or deployment.
+1. direct founder-owner authorization effective while LLC formation is pending;
+2. exact npm package and MCP namespace contracts;
+3. the canonical privacy, terms, security, and support policy files;
+4. current license, notices, generated wrappers, tests, and deterministic package plans.
+
+Account authentication is not fabricated by the static readiness result. npm
+enforces it separately when an actual registry request is made.
+
+OpenAI/Claude provider review, marketplace submission, MCP Registry submission, deployment, and future LLC operation remain separate workflows. None is inferred from npm readiness, and provider review does not block npm publication.
 
 The repository contains the unmodified Apache License 2.0 text and a deterministic third-party notice bundle. Apache-2.0 does not require a project-specific copyright-holder/year placeholder in the license text.
 

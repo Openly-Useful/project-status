@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -28,9 +28,14 @@ test("Project Status npm and MCP Registry identities agree", () => {
 test("combined source package preserves both existing local bins", () => {
   const packageJson = json(join(packageRoot, "package.json"));
   assert.deepEqual(packageJson.bin, {
-    "project-status-mcp": "./dist/index.js",
-    "runglance-mcp": "./dist/runglance-index.js",
+    "project-status-mcp": "dist/index.js",
+    "runglance-mcp": "dist/runglance-index.js",
   });
+  for (const path of Object.values(packageJson.bin)) {
+    const output = join(packageRoot, path);
+    assert.ok(readFileSync(output, "utf8").startsWith("#!/usr/bin/env node\n"));
+    assert.notEqual(statSync(output).mode & 0o111, 0);
+  }
 });
 
 test("published package carries the owner-approved root license", () => {

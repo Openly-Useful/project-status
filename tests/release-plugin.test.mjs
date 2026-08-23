@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { checkRelease, externalActivationSatisfied, validateCompanionVersions, validateMcpDistributionIdentity } from "../scripts/release-check.mjs";
+import { checkRelease, founderPublicationAuthorizationSatisfied, validateCompanionVersions, validateMcpDistributionIdentity } from "../scripts/release-check.mjs";
 import { bundledEntrypointErrors, inspectReleaseState, publisherErrors } from "../scripts/release-sync.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
@@ -119,7 +119,7 @@ test("release sync check is read-only and clean", () => {
   assert.equal(after.valid, true, after.errors.join("\n"));
 });
 
-test("release check separates local distribution readiness from external activation", () => {
+test("release check separates distribution and npm readiness from provider workflows", () => {
   const result = checkRelease();
   assert.equal(result.valid, true, result.errors.join("\n"));
   assert.equal(result.distributionReady, true);
@@ -147,47 +147,52 @@ test("release check separates local distribution readiness from external activat
   const noticesGate = result.releaseGates.find((gate) => gate.id === "third-party-notices");
   const policyGate = result.releaseGates.find((gate) => gate.id === "public-policy-files");
   const publisherGate = result.releaseGates.find((gate) => gate.id === "publisher-contract");
+  const packageGate = result.releaseGates.find((gate) => gate.id === "package-and-namespace-contracts");
   const founderGate = result.releaseGates.find((gate) => gate.id === "founder-record-and-open-source-authorization");
-  const externalGate = result.releaseGates.find((gate) => gate.id === "entity-and-external-verification");
-  for (const gate of [licenseGate, noticesGate, policyGate, publisherGate, founderGate]) {
+  const authorizationGate = result.releaseGates.find((gate) => gate.id === "founder-authorized-package-publication");
+  for (const gate of [licenseGate, noticesGate, policyGate, publisherGate, packageGate, founderGate, authorizationGate]) {
     assert.equal(gate?.status, "satisfied", JSON.stringify(gate));
   }
-  assert.equal(externalGate?.status, "pending_external_verification");
-  assert.match(externalGate.detail, /IP assignment, ownership transfer, and ownership verification are not required/);
-  assert.equal(result.publishReady, false);
+  assert.match(authorizationGate.detail, /provider review is a separate workflow and does not block npm/);
+  assert.equal(result.publishReady, true);
 });
 
-test("publisher activation is fail-closed until every blocker is cleared", () => {
+test("founder package authorization is effective while LLC formation and provider review remain pending", () => {
   const pending = json(join(root, "publisher", "publisher.json"));
-  assert.equal(externalActivationSatisfied(pending), false);
+  assert.equal(pending.legal.status, "formation-pending");
+  assert.equal(pending.legal.activeName, null);
+  assert.ok(pending.publication.blockingRequirements.includes("provider-review"));
+  assert.equal(founderPublicationAuthorizationSatisfied(pending), true);
   assert.deepEqual(publisherErrors(pending), []);
 
-  const active = structuredClone(pending);
-  active.legal.status = "active";
-  active.legal.activeName = active.legal.plannedName;
-  active.repositoryContext.futureEntityPublishing = "documented";
-  active.publication.externalPublicationAllowed = true;
-  active.publication.authorization = "authorized";
-  active.publication.blockingRequirements = [];
-  assert.deepEqual(publisherErrors(active), []);
-  assert.equal(externalActivationSatisfied(active), true);
+  const revoked = structuredClone(pending);
+  revoked.publication.authorization = "withheld";
+  assert.equal(founderPublicationAuthorizationSatisfied(revoked), false);
+  assert.match(publisherErrors(revoked).join("\n"), /authorization must be granted/);
 
-  active.publication.blockingRequirements = ["namespace-verification"];
-  assert.equal(externalActivationSatisfied(active), false);
-  assert.match(publisherErrors(active).join("\n"), /requires all blocking requirements to be cleared/);
+  const entityBlocked = structuredClone(pending);
+  entityBlocked.publication.blockingRequirements.push("formation-active");
+  assert.equal(founderPublicationAuthorizationSatisfied(entityBlocked), false);
+  assert.match(publisherErrors(entityBlocked).join("\n"), /LLC formation and separate publisher authorization cannot block founder-authorized publication/);
 });
 
-test("npm publication entry points invoke the canonical fail-closed release assertion", () => {
+test("both npm prepublishOnly entry points pass the canonical founder-authorized release assertion", () => {
   for (const packagePath of ["packages/mcp/package.json", "packages/runglance-mcp/package.json"]) {
     assert.equal(json(join(root, packagePath)).scripts.prepublishOnly, "node ../../scripts/assert-publish-ready.mjs");
+    const packageRoot = join(root, packagePath, "..");
+    const result = spawnSync("npm", ["run", "prepublishOnly", "--silent"], {
+      cwd: packageRoot,
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    assert.match(result.stdout, /NPM PUBLICATION READY/);
   }
   const result = spawnSync(process.execPath, [join(root, "scripts", "assert-publish-ready.mjs")], {
     cwd: root,
     encoding: "utf8",
   });
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /PUBLICATION BLOCKED/);
-  assert.match(result.stderr, /entity-and-external-verification: pending_external_verification/);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stdout, /NPM PUBLICATION READY/);
 });
 
 test("release check rejects companion package version drift", (context) => {
@@ -234,6 +239,12 @@ test("release validation rejects MCP package and registry identity drift", (cont
     ["project-status", "mcp", "@openly-useful/project-status-mcp", "org.openlyuseful/project-status"],
     ["runglance", "runglance-mcp", "@openly-useful/runglance-mcp", "org.openlyuseful/runglance"],
   ]) {
+    const bin = packageDirectory === "mcp"
+      ? { "project-status-mcp": "dist/index.js", "runglance-mcp": "dist/runglance-index.js" }
+      : { "runglance-mcp": "dist/index.js" };
+    const files = packageDirectory === "mcp"
+      ? ["dist/index.js", "dist/runglance-index.js", "README.md", "LICENSE"]
+      : ["dist/index.js", "README.md", "LICENSE"];
     mkdirSync(join(fixtureRoot, "packages", packageDirectory), { recursive: true });
     mkdirSync(join(fixtureRoot, "mcp-registry", component), { recursive: true });
     writeFileSync(join(fixtureRoot, "packages", packageDirectory, "package.json"), `${JSON.stringify({
@@ -241,6 +252,9 @@ test("release validation rejects MCP package and registry identity drift", (cont
       version,
       mcpName,
       license: "Apache-2.0",
+      bin,
+      files,
+      publishConfig: { access: "public" },
       repository: { url: "git+https://github.com/Openly-Useful/project-status.git" },
       bugs: "https://openlyuseful.org/support",
     })}\n`);

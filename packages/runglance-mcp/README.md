@@ -17,4 +17,4 @@ node dist/index.js --help
 
 The shared pinned TypeScript/esbuild toolchain under `../mcp` must be present in a source checkout. The published bundle has no runtime dependency installation step.
 
-Nothing in this package authorizes npm publication or MCP Registry submission. External publication remains gated on formation of the planned publisher, explicit publisher authorization, namespace verification, and public policy verification.
+The founder-owner directly authorizes npm package publication while Openly Useful LLC formation remains pending. The package's `prepublishOnly` gate validates the founder authorization, package/MCP namespaces, public-policy files, licensing, generated wrappers, tests, and deterministic release inputs. npm account authentication is enforced by the registry at the actual publish request; provider marketplace review and MCP Registry submission remain separate workflows.

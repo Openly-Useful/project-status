@@ -15,6 +15,12 @@ test("publisher mirror records the formation-pending one-entity boundary without
   assert.equal(publisher.displayName, "Openly Useful");
   assert.equal(publisher.legal.plannedName, "Openly Useful LLC");
   assert.equal(publisher.legal.status, "formation-pending");
+  assert.equal(publisher.legal.activeName, null);
+  assert.deepEqual(publisher.legal.currentOperator, {
+    type: "founder-individual",
+    displayName: "Founder of Openly Useful",
+    operatingAs: "Openly Useful",
+  });
   assert.deepEqual([...publisher.legal.plannedRoles].sort(), ["licensee", "operator", "publisher"]);
   assert.deepEqual(publisher.repositoryContext.runGlanceCopyright, {
     authorshipStatus: "sole-author-confirmed",
@@ -24,8 +30,15 @@ test("publisher mirror records the formation-pending one-entity boundary without
   });
   assert.equal(publisher.repositoryContext.currentOpenSourcePublication, "founder-authorized");
   assert.equal(publisher.repositoryContext.futureEntityPublishing, "documentation-pending-after-formation");
-  assert.equal(publisher.publication.externalPublicationAllowed, false);
-  assert.equal(publisher.publication.authorization, "withheld");
+  assert.equal(publisher.publication.externalPublicationAllowed, true);
+  assert.equal(publisher.publication.authorization, "granted");
+  assert.equal(publisher.publication.authorizationBasis, "founder-owner-direct");
+  assert.equal(publisher.publication.effectiveWhileFormationPending, true);
+  assert.deepEqual(publisher.publication.blockingRequirements, [
+    "namespace-verification",
+    "provider-account-authentication",
+    "provider-review",
+  ]);
 });
 
 test("publisher and component metadata use reachable public endpoints and the routed contact", () => {
@@ -36,6 +49,8 @@ test("publisher and component metadata use reachable public endpoints and the ro
   });
   assert.equal(publisher.policies.support, "https://openlyuseful.org/support");
   assert.equal(publisher.policies.security, "https://openlyuseful.org/security");
+  assert.equal(publisher.authorityManifestMirror, "https://github.com/Openly-Useful/openlyuseful.org/blob/main/publisher/manifest.json");
+  assert.equal(publisher.policyMirrors.privacy, "https://github.com/Openly-Useful/openlyuseful.org/blob/main/legal/privacy.html");
 
   for (const product of ["project-status", "runglance"]) {
     const metadata = JSON.parse(readFileSync(join(root, "skill", product, "assets", "package-metadata.json"), "utf8"));
@@ -54,14 +69,23 @@ test("publisher and component metadata use reachable public endpoints and the ro
   }
 });
 
-test("publisher validator rejects an ownership transfer or premature entity authorization claim", () => {
+test("publisher validator rejects an ownership transfer or invalid founder authorization claim", () => {
   const transferred = structuredClone(publisher);
   transferred.repositoryContext.runGlanceCopyright.transferRequired = true;
   assert.match(publisherErrors(transferred).join("\n"), /transferRequired must be false/);
 
-  const premature = structuredClone(publisher);
-  premature.repositoryContext.futureEntityPublishing = "founder-authorized-license";
-  assert.match(publisherErrors(premature).join("\n"), /future entity publishing authorization/);
+  const wrongBasis = structuredClone(publisher);
+  wrongBasis.publication.authorizationBasis = "future-llc";
+  assert.match(publisherErrors(wrongBasis).join("\n"), /authorization basis must be founder-owner-direct/);
+
+  const prematureEntity = structuredClone(publisher);
+  prematureEntity.legal.status = "active";
+  prematureEntity.legal.activeName = prematureEntity.legal.plannedName;
+  assert.match(publisherErrors(prematureEntity).join("\n"), /must remain formation-pending/);
+
+  const entityBlocked = structuredClone(publisher);
+  entityBlocked.publication.blockingRequirements.push("formation-active", "publisher-authorization");
+  assert.match(publisherErrors(entityBlocked).join("\n"), /LLC formation and separate publisher authorization cannot block founder-authorized publication/);
 });
 
 test("LICENSE is the exact Apache License 2.0 reference text", () => {

@@ -151,8 +151,12 @@ export function publisherErrors(publisher) {
   }
   if (publisher.organization?.github !== "https://github.com/Openly-Useful") errors.push("publisher organization GitHub URL is invalid");
   if (publisher.legal?.plannedName !== "Openly Useful LLC") errors.push("publisher planned legal entity must be Openly Useful LLC");
-  if (!["formation-pending", "active"].includes(publisher.legal?.status)) errors.push("publisher legal entity status must be formation-pending or active");
-  if (publisher.legal?.status === "formation-pending" && publisher.legal?.activeName !== null) errors.push("formation-pending publisher cannot have an active legal name");
+  if (publisher.legal?.status !== "formation-pending") errors.push("publisher legal entity status must remain formation-pending until formation is accepted");
+  if (publisher.legal?.activeName !== null) errors.push("formation-pending publisher cannot have an active legal name");
+  const currentOperator = publisher.legal?.currentOperator;
+  if (currentOperator?.type !== "founder-individual") errors.push("publisher current operator must be founder-individual");
+  if (currentOperator?.displayName !== "Founder of Openly Useful") errors.push("publisher current operator display name is invalid");
+  if (currentOperator?.operatingAs !== "Openly Useful") errors.push("publisher current operator must operate as Openly Useful");
   const plannedRoles = publisher.legal?.plannedRoles;
   if (!Array.isArray(plannedRoles) || JSON.stringify([...plannedRoles].sort()) !== JSON.stringify(["licensee", "operator", "publisher"])) {
     errors.push("publisher planned roles must be licensee, operator, and publisher");
@@ -177,6 +181,18 @@ export function publisherErrors(publisher) {
   for (const [field, expected] of Object.entries(expectedPolicies)) {
     if (publisher.policies?.[field] !== expected) errors.push(`publisher policies.${field} must be ${expected}`);
   }
+  const expectedPolicyMirrors = {
+    privacy: "https://github.com/Openly-Useful/openlyuseful.org/blob/main/legal/privacy.html",
+    terms: "https://github.com/Openly-Useful/openlyuseful.org/blob/main/legal/terms.html",
+    security: "https://github.com/Openly-Useful/openlyuseful.org/blob/main/security.html",
+    support: "https://github.com/Openly-Useful/openlyuseful.org/blob/main/support.html",
+  };
+  for (const [field, expected] of Object.entries(expectedPolicyMirrors)) {
+    if (publisher.policyMirrors?.[field] !== expected) errors.push(`publisher policyMirrors.${field} must be ${expected}`);
+  }
+  if (publisher.authorityManifestMirror !== "https://github.com/Openly-Useful/openlyuseful.org/blob/main/publisher/manifest.json") {
+    errors.push("publisher authorityManifestMirror is invalid");
+  }
   if (publisher.contacts?.public !== "hello@openlyuseful.org") errors.push("publisher public contact is invalid");
   if (publisher.contacts?.routing !== "Use the email subject to route publishing, security, legal, and support requests.") errors.push("publisher contact routing is invalid");
   if (publisher.namespaces?.openSourceMcp !== "org.openlyuseful") errors.push("publisher open-source MCP namespace must be org.openlyuseful");
@@ -187,12 +203,12 @@ export function publisherErrors(publisher) {
   if (publisher.repositoryContext?.repositories?.runGlance !== repository) errors.push("publisher RunGlance repository is invalid");
   if (publisher.publication?.localGenerationAllowed !== true) errors.push("publisher must allow local generation");
   if (publisher.publication?.localTestingAllowed !== true) errors.push("publisher must allow local testing");
-  if (typeof publisher.publication?.externalPublicationAllowed !== "boolean") errors.push("publisher externalPublicationAllowed must be boolean");
-  if (!["withheld", "authorized"].includes(publisher.publication?.authorization)) errors.push("publisher publication authorization is invalid");
-  if (publisher.legal?.status === "formation-pending" && publisher.publication?.externalPublicationAllowed !== false) errors.push("external publication must remain disabled while formation is pending");
-  if (publisher.legal?.status === "formation-pending" && publisher.publication?.authorization !== "withheld") errors.push("publication authorization must remain withheld while formation is pending");
+  if (publisher.publication?.externalPublicationAllowed !== true) errors.push("publisher external publication must be founder-authorized");
+  if (publisher.publication?.authorization !== "granted") errors.push("publisher publication authorization must be granted");
+  if (publisher.publication?.authorizationBasis !== "founder-owner-direct") errors.push("publisher authorization basis must be founder-owner-direct");
+  if (publisher.publication?.effectiveWhileFormationPending !== true) errors.push("founder publication authorization must remain effective while formation is pending");
   const blockers = publisher.publication?.blockingRequirements;
-  const allowedBlockers = ["formation-active", "namespace-verification", "public-policy-url-verification", "publisher-authorization"];
+  const allowedBlockers = ["namespace-verification", "provider-account-authentication", "provider-review"];
   if (!Array.isArray(blockers)) {
     errors.push("publisher blockingRequirements must be an array");
   } else {
@@ -201,29 +217,8 @@ export function publisherErrors(publisher) {
     for (const blocker of uniqueBlockers) {
       if (!allowedBlockers.includes(blocker)) errors.push(`publisher blockingRequirements contains an unknown requirement: ${blocker}`);
     }
-    if (publisher.legal?.status === "formation-pending"
-      && JSON.stringify([...uniqueBlockers].sort()) !== JSON.stringify([...allowedBlockers].sort())) {
-      errors.push("formation-pending publisher blocking requirements are incomplete");
-    }
-    if (publisher.legal?.status === "active" && uniqueBlockers.includes("formation-active")) {
-      errors.push("active publisher cannot retain the formation-active blocker");
-    }
-    const activationAuthorized = publisher.publication?.externalPublicationAllowed === true
-      && publisher.publication?.authorization === "authorized";
-    if (activationAuthorized && uniqueBlockers.length !== 0) {
-      errors.push("authorized external publication requires all blocking requirements to be cleared");
-    }
-    if (publisher.publication?.externalPublicationAllowed === true && publisher.publication?.authorization !== "authorized") {
-      errors.push("external publication cannot be enabled without publisher authorization");
-    }
-    if (publisher.publication?.authorization === "authorized" && publisher.publication?.externalPublicationAllowed !== true) {
-      errors.push("publisher authorization and external publication activation must advance together");
-    }
-    if (activationAuthorized && publisher.legal?.status !== "active") {
-      errors.push("external publication cannot be activated before the publisher entity is active");
-    }
-    if (activationAuthorized && publisher.repositoryContext?.futureEntityPublishing !== "documented") {
-      errors.push("external publication requires documented future-entity publishing authorization");
+    if (uniqueBlockers.includes("formation-active") || uniqueBlockers.includes("publisher-authorization")) {
+      errors.push("LLC formation and separate publisher authorization cannot block founder-authorized publication");
     }
   }
   for (const field of ["authorityEndpoint", "derivation", "activation"]) {

@@ -175,12 +175,19 @@ export function validateMcpDistributionIdentity(version, errors, root = releaseR
       registryPath: join(root, "mcp-registry", "project-status", "server.json"),
       packageName: "@openly-useful/project-status-mcp",
       mcpName: "org.openlyuseful/project-status",
+      bin: {
+        "project-status-mcp": "dist/index.js",
+        "runglance-mcp": "dist/runglance-index.js",
+      },
+      files: ["dist/index.js", "dist/runglance-index.js", "README.md", "LICENSE"],
     },
     runGlance: {
       packagePath: join(root, "packages", "runglance-mcp", "package.json"),
       registryPath: join(root, "mcp-registry", "runglance", "server.json"),
       packageName: "@openly-useful/runglance-mcp",
       mcpName: "org.openlyuseful/runglance",
+      bin: { "runglance-mcp": "dist/index.js" },
+      files: ["dist/index.js", "README.md", "LICENSE"],
     },
   };
   const result = {};
@@ -203,6 +210,10 @@ export function validateMcpDistributionIdentity(version, errors, root = releaseR
     if (packageManifest.mcpName !== expected.mcpName) errors.push(`${key} package mcpName must be ${expected.mcpName}`);
     if (packageManifest.version !== version) errors.push(`${key} package version differs from VERSION`);
     if (packageManifest.license !== "Apache-2.0") errors.push(`${key} package license must be Apache-2.0`);
+    if (packageManifest.private === true) errors.push(`${key} package cannot be private`);
+    if (packageManifest.publishConfig?.access !== "public") errors.push(`${key} package publishConfig.access must be public`);
+    if (JSON.stringify(packageManifest.bin) !== JSON.stringify(expected.bin)) errors.push(`${key} package bin contract is invalid`);
+    if (JSON.stringify(packageManifest.files) !== JSON.stringify(expected.files)) errors.push(`${key} package files allowlist is invalid`);
     if (packageManifest.repository?.url !== `git+${repository}.git`) errors.push(`${key} package repository is invalid`);
     if (packageManifest.bugs !== "https://openlyuseful.org/support") errors.push(`${key} package support URL is invalid`);
     if (registryManifest.name !== expected.mcpName) errors.push(`${key} registry name must match package mcpName`);
@@ -222,19 +233,26 @@ export function validateMcpDistributionIdentity(version, errors, root = releaseR
   return result;
 }
 
-export function externalActivationSatisfied(publisher) {
+export function founderPublicationAuthorizationSatisfied(publisher) {
   return Boolean(
-    publisher?.legal?.status === "active"
-    && publisher?.legal?.activeName === publisher?.legal?.plannedName
-    && publisher?.repositoryContext?.futureEntityPublishing === "documented"
+    publisher?.legal?.status === "formation-pending"
+    && publisher?.legal?.activeName === null
+    && publisher?.legal?.currentOperator?.type === "founder-individual"
     && publisher?.publication?.externalPublicationAllowed === true
-    && publisher?.publication?.authorization === "authorized"
+    && publisher?.publication?.authorization === "granted"
+    && publisher?.publication?.authorizationBasis === "founder-owner-direct"
+    && publisher?.publication?.effectiveWhileFormationPending === true
     && Array.isArray(publisher?.publication?.blockingRequirements)
-    && publisher.publication.blockingRequirements.length === 0
+    && !publisher.publication.blockingRequirements.includes("formation-active")
+    && !publisher.publication.blockingRequirements.includes("publisher-authorization")
   );
 }
 
-function releaseGates(release) {
+// Backwards-compatible export for existing release consumers. External package
+// publication is currently authorized by the founder-owner, not by an active LLC.
+export const externalActivationSatisfied = founderPublicationAuthorizationSatisfied;
+
+function releaseGates(release, mcpDistributions) {
   const licensePath = join(releaseRoot, "LICENSE");
   const licenseDigest = existsSync(licensePath) && statSync(licensePath).isFile()
     ? createHash("sha256").update(readFileSync(licensePath)).digest("hex")
@@ -281,7 +299,13 @@ function releaseGates(release) {
     && release.publisher?.repositoryContext?.runGlanceCopyright?.transferRequired === false
     && release.publisher?.repositoryContext?.currentOpenSourcePublication === "founder-authorized",
   );
-  const externalActivationComplete = externalActivationSatisfied(release.publisher);
+  const packageNamespaceContractsValid = Boolean(
+    mcpDistributions?.projectStatus?.packageName === `${release.publisher?.namespaces?.npm}/project-status-mcp`
+    && mcpDistributions?.runGlance?.packageName === `${release.publisher?.namespaces?.npm}/runglance-mcp`
+    && mcpDistributions?.projectStatus?.mcpName === `${release.publisher?.namespaces?.openSourceMcp}/project-status`
+    && mcpDistributions?.runGlance?.mcpName === `${release.publisher?.namespaces?.openSourceMcp}/runglance`
+  );
+  const founderPublicationAuthorized = founderPublicationAuthorizationSatisfied(release.publisher);
   return [
     {
       id: "apache-2.0-license",
@@ -310,6 +334,13 @@ function releaseGates(release) {
         : "Publisher metadata is incomplete or inconsistent across Project Status and RunGlance.",
     },
     {
+      id: "package-and-namespace-contracts",
+      status: packageNamespaceContractsValid ? "satisfied" : "pending_implementation",
+      detail: packageNamespaceContractsValid
+        ? "Both npm package names and MCP identities match the canonical Openly Useful namespaces."
+        : "The publishable package or MCP identities do not match the canonical Openly Useful namespaces.",
+    },
+    {
       id: "founder-record-and-open-source-authorization",
       status: founderRecordConfirmed ? "satisfied" : "pending_implementation",
       detail: founderRecordConfirmed
@@ -317,11 +348,11 @@ function releaseGates(release) {
         : "The owner-confirmed founder record or current open-source publication authorization is not encoded correctly.",
     },
     {
-      id: "entity-and-external-verification",
-      status: externalActivationComplete ? "satisfied" : "pending_external_verification",
-      detail: externalActivationComplete
-        ? "Publisher entity formation, future-entity publishing authorization, external verification, and blocker clearance are recorded as complete."
-        : "Openly Useful LLC formation, documentation of its future publishing authorization, provider/business verification, public URL reachability, and external activation remain pending. IP assignment, ownership transfer, and ownership verification are not required.",
+      id: "founder-authorized-package-publication",
+      status: founderPublicationAuthorized ? "satisfied" : "pending_authorization",
+      detail: founderPublicationAuthorized
+        ? "The founder-owner directly authorizes package publication while LLC formation remains pending; provider review is a separate workflow and does not block npm."
+        : "Package publication requires direct founder-owner authorization that remains effective while LLC formation is pending.",
     },
   ];
 }
@@ -355,7 +386,7 @@ export function checkRelease() {
     if (!readme.includes("skill/project-status")) errors.push("README.md must identify the canonical skill source");
     if (!readme.includes("release-sync.mjs")) errors.push("README.md must document generated-wrapper synchronization");
   }
-  const gates = releaseGates(release);
+  const gates = releaseGates(release, mcpDistributions);
   const uniqueErrors = [...new Set(errors)];
   return {
     valid: uniqueErrors.length === 0,
@@ -388,7 +419,7 @@ function format(result) {
     `RELEASE CHECK ${result.valid ? "OK" : "FAILED"}`,
     `Version: ${result.version ?? "unknown"}`,
     `Distribution packages: ${result.distributionReady ? "ready" : "not ready"}`,
-    `Public publication: ${result.publishReady ? "ready" : "waiting on external verification and activation"}`,
+    `npm package publication: ${result.publishReady ? "ready" : "waiting on package, namespace, policy, or founder-authorization validation"}`,
     `MCP companion: ${result.mcpIncluded ? "included" : "not built; omitted"}`,
     ...result.releaseGates.map((gate) => `- ${gate.id}: ${gate.status} — ${gate.detail}`),
     ...result.errors.map((error) => `ERROR: ${error}`),

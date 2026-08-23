@@ -1,9 +1,10 @@
 # Local release and monitoring policy record
 
-Status: approved local preparation decisions recorded. External monitoring,
-publication, marketplace, and business-verification actions remain inactive.
-This record does not authorize deployment, installation, scheduling,
-notification, or publication.
+Status: founder-authorized open-source and npm package publication is recorded.
+External monitoring, marketplace submission, MCP Registry submission,
+deployment, and provider-review actions remain separate. This record does not
+authorize installation, scheduling, notification, deployment, or provider
+submission.
 
 ## Publisher, authorship, and entity boundary
 
@@ -11,17 +12,19 @@ notification, or publication.
   component and provider metadata.
 - **Openly Useful LLC** is the planned publisher/operator/licensee and remains
   `formation-pending`.
+- Openly Useful is currently operated by the individual founder.
 - RunGlance was solely authored by, and remains personally owned by, the
   founder.
 - No copyright assignment or ownership transfer is required or planned.
-- The future entity may publish, operate, and license RunGlance under founder
-  authorization without becoming its copyright owner.
+- The founder-owner directly authorizes current source and npm package
+  publication while formation is pending. The future entity may later publish,
+  operate, and license RunGlance under founder authorization without becoming
+  its copyright owner.
 - Sole authorship and personal ownership are owner-confirmed facts, not
   public-activation gates.
-- Public marketplace, registry, package, and commercial activation remains
-  pending entity formation, documentation of founder authorization for future
-  LLC publication, provider business verification, public URL reachability,
-  and separate authorization.
+- Provider marketplace review does not block npm package publication.
+  Marketplace submission, MCP Registry submission, deployment, and commercial
+  activation retain separate authorization and validation paths.
 
 ## Approved monitoring preparation parameters
 
@@ -81,6 +84,7 @@ escalation procedure.
 The public-safe publisher mirror contains brand, policy, namespace, planned
 entity-role, and non-identifying ownership-status facts. Private legal filings,
 personal identifiers, account credentials, and restricted contact records must
-not enter archives. No entry here authorizes a commit, push, merge, deployment,
-installation, schedule, publication, filing, purchase, outreach, or account
-change.
+not enter archives. This record documents the founder's current source and npm
+package publication authorization; it does not itself initiate a commit, push,
+merge, deployment, installation, schedule, registry request, filing, purchase,
+outreach, or account change.
