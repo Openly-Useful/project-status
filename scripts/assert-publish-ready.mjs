@@ -15,14 +15,14 @@ export function assertPublishReady() {
   throw new Error([
     "PUBLICATION BLOCKED: the canonical Openly Useful release gate is not satisfied.",
     ...reasons.map((reason) => `- ${reason}`),
-    "Complete formation, publisher authorization, namespace verification, live public-policy URL verification, and clear blockingRequirements before publishing.",
+    "Confirm the founder-owner authorization, package and namespace contracts, and public-policy files before publishing. npm account authentication is enforced by the registry; provider review is a separate workflow.",
   ].join("\n"));
 }
 
 export async function main(argv = process.argv.slice(2)) {
   if (argv.length !== 0) throw new Error("Usage: assert-publish-ready.mjs");
   const result = assertPublishReady();
-  process.stdout.write(`PUBLICATION READY ${result.version}\n`);
+  process.stdout.write(`NPM PUBLICATION READY ${result.version}\n`);
   return 0;
 }
 

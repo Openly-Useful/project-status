@@ -6,7 +6,7 @@ Optional local, read-only companions for Project Status readiness and standalone
 
 The publishable Project Status package identity is `@openly-useful/project-status-mcp`, with official MCP Registry name `org.openlyuseful/project-status`. This source package deliberately retains both the `project-status-mcp` and `runglance-mcp` local bins so existing plugin builds and tests keep working. Public RunGlance packaging is owned by the sibling `packages/runglance-mcp` bundle and uses its independent package and registry identity.
 
-Neither package nor either MCP Registry record is published by this repository. External publication remains gated on formation of the planned publisher, explicit authorization, namespace verification, and public policy verification.
+The founder-owner directly authorizes npm package publication while Openly Useful LLC formation remains pending. The package's `prepublishOnly` gate validates the founder authorization, package/MCP namespaces, public-policy files, licensing, generated wrappers, tests, and deterministic release inputs. npm account authentication is enforced by the registry at the actual publish request; provider marketplace review is separate and does not block npm.
 
 This subpackage targets Node.js 20+, the stable MCP TypeScript SDK v2 split packages,
 the 2026-07-28 protocol, and Zod v4 Standard Schemas. It serves stdio only and never

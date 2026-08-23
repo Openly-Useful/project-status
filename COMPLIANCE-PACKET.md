@@ -1,9 +1,10 @@
 # Local compliance packet
 
-Status: local identity, licensing, policy, and runtime-notice inputs are
-implemented for release `1.2.0`. Public marketplace submission, package
-publication, hosted operation, and business verification remain external
-actions. This packet is not legal advice or publication authorization.
+Status: identity, licensing, policy, runtime-notice, package, namespace, and
+founder-authorization inputs are implemented for release `1.2.0`. npm package
+publication is authorized but has not been performed. Marketplace submission,
+MCP Registry submission, hosted operation, and provider review remain separate
+external actions. This packet is not legal advice.
 
 ## Publisher and ownership record
 
@@ -13,18 +14,22 @@ The repository mirrors the canonical Openly Useful publisher manifest in
 - Public publisher/developer brand: **Openly Useful**.
 - Planned legal entity: **Openly Useful LLC**.
 - Entity status: **formation-pending**.
+- Current operator: **individual founder**, operating as Openly Useful.
 - Planned entity roles: publisher, operator, and licensee.
 - RunGlance authorship: **sole-author-confirmed**.
 - RunGlance copyright: personally owned by the individual founder.
 - Ownership transfer: **not required and not planned**.
 - Current open-source publication: founder-authorized.
+- Current npm package publication: directly founder-owner authorized while
+  formation remains pending.
 - Future LLC publication: authorization documentation pending until after
   formation.
 
-Openly Useful LLC must not be described as already formed or as the RunGlance
-copyright owner. Its eventual publisher/operator/licensee role does not depend
-on an assignment of ownership. Sole authorship and personal ownership are
-owner-confirmed and are not public-activation gates.
+Openly Useful LLC must not be described as already formed, as the current
+operator, or as the RunGlance copyright owner. Its eventual
+publisher/operator/licensee role does not depend on an assignment of ownership.
+Sole authorship, personal ownership, and direct founder publication
+authorization are owner-confirmed and do not depend on LLC formation.
 
 ## License and notices
 
@@ -60,30 +65,26 @@ website, privacy, terms, and support values. Claude manifests carry the common
 publisher, homepage, repository, and license values; their physical skill copy
 also contains the canonical component metadata.
 
-## External gates
+## npm publication gate
 
-The release may be locally distribution-ready while public publication remains
-blocked by external state:
+The fail-closed npm gate requires:
 
-1. Complete and verify Openly Useful LLC formation before identifying it as the
-   active legal operator.
-2. After formation, document the founder's authorization for LLC publication,
-   and verify the public repository and every policy/support URL anonymously.
-3. Complete provider business/developer verification and domain-namespace
-   authentication.
-4. Review the generated archives and checksums from the exact release commit.
-5. Authorize each package publication, MCP Registry entry, marketplace
-   submission, and deployment separately.
+1. Direct founder-owner authorization effective during formation.
+2. Exact `@openly-useful` package and `org.openlyuseful` MCP contracts.
+3. Canonical public policy files and authority metadata.
+4. Current license, notices, generated wrappers, tests, and deterministic plans.
 
-No IP assignment, ownership transfer, or ownership verification appears in
-this gate list. The founder's personal ownership and sole authorship are already
-confirmed, and transfer is neither required nor planned.
+npm account authentication is not part of the static readiness claim. The
+registry enforces it separately at the actual publish request.
+
+Provider review does not block npm. Marketplace, MCP Registry, deployment, and
+future LLC operation each remain separately controlled. No IP assignment,
+ownership transfer, or ownership verification appears in the npm gate.
 
 ## Completion criteria
 
-`node scripts/release-check.mjs --json` must report valid local inputs and
-`distributionReady: true`. While the publisher manifest records
-`formation-pending`, it must continue to report `publishReady: false` and an
-`entity-and-external-verification` gate. No local check creates or verifies an
-external account, entity filing, registry entry, marketplace listing, or
-deployment.
+`node scripts/release-check.mjs --json` must report `valid: true`,
+`distributionReady: true`, and `publishReady: true`; both package
+`prepublishOnly` scripts must pass without publishing. No local check creates or
+authenticates an npm account, files an entity, submits a registry or marketplace
+listing, or deploys a service.

@@ -23,6 +23,7 @@ test("RunGlance npm and MCP Registry identities agree", () => {
   assert.equal(serverJson.packages[0].version, packageJson.version);
   assert.equal(serverJson.packages[0].transport.type, "stdio");
   assert.equal(serverJson.$schema, "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json");
+  assert.deepEqual(packageJson.bin, { "runglance-mcp": "dist/index.js" });
 });
 
 test("standalone package and combined source package have distinct identities", () => {

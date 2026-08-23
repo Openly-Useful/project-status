@@ -8,6 +8,11 @@
     "plannedName": "Openly Useful LLC",
     "activeName": null,
     "status": "formation-pending",
+    "currentOperator": {
+      "type": "founder-individual",
+      "displayName": "Founder of Openly Useful",
+      "operatingAs": "Openly Useful"
+    },
     "plannedRoles": [
       "publisher",
       "operator",
@@ -37,22 +42,30 @@
     "security": "https://openlyuseful.org/security",
     "support": "https://openlyuseful.org/support"
   },
+  "policyMirrors": {
+    "privacy": "https://github.com/Openly-Useful/openlyuseful.org/blob/main/legal/privacy.html",
+    "terms": "https://github.com/Openly-Useful/openlyuseful.org/blob/main/legal/terms.html",
+    "security": "https://github.com/Openly-Useful/openlyuseful.org/blob/main/security.html",
+    "support": "https://github.com/Openly-Useful/openlyuseful.org/blob/main/support.html"
+  },
+  "authorityManifestMirror": "https://github.com/Openly-Useful/openlyuseful.org/blob/main/publisher/manifest.json",
   "publication": {
     "localGenerationAllowed": true,
     "localTestingAllowed": true,
-    "externalPublicationAllowed": false,
-    "authorization": "withheld",
+    "externalPublicationAllowed": true,
+    "authorization": "granted",
+    "authorizationBasis": "founder-owner-direct",
+    "effectiveWhileFormationPending": true,
     "blockingRequirements": [
-      "formation-active",
-      "publisher-authorization",
       "namespace-verification",
-      "public-policy-url-verification"
+      "provider-account-authentication",
+      "provider-review"
     ]
   },
   "artifactPolicy": {
     "authorityEndpoint": "This manifest is the published authority endpoint for Openly Useful publisher and marketplace verification. It is projected from the governed editable publisher source.",
     "derivation": "Provider-specific skills, MCP manifests, packages, and marketplace listings must derive publisher identity, domains, policy URLs, contacts, and namespaces from this published authority endpoint.",
-    "activation": "The planned legal entity must not be represented as formed, active, or the operator until formation and required publisher verification are complete."
+    "activation": "Openly Useful is founder-operated while Openly Useful LLC formation is pending. External source and registry publication is authorized by the founder-owner. The planned LLC must not be represented as formed, active, or the operator until formation is accepted; later LLC operation does not require a transfer of RunGlance ownership."
   },
   "repositoryContext": {
     "repositories": {
@@ -68,5 +81,5 @@
     "currentOpenSourcePublication": "founder-authorized",
     "futureEntityPublishing": "documentation-pending-after-formation"
   },
-  "lastUpdated": "2026-08-16"
+  "lastUpdated": "2026-08-23"
 }

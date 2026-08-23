@@ -2,6 +2,15 @@
 
 All notable distribution changes are documented here. This project follows semantic versioning for skill and plugin artifacts.
 
+## Unreleased
+
+### Changed
+
+- Aligned the repository publisher mirror with the live founder-operated Openly Useful authority while Openly Useful LLC remains formation-pending.
+- Made npm package readiness depend on direct founder-owner authorization, exact package/MCP namespaces, public-policy files, and deterministic release validation instead of LLC formation or provider marketplace review.
+- Normalized both npm CLI `bin` maps and made the combined MCP build mark its bundled commands executable so npm preserves every published command without manifest correction.
+- Kept npm account authentication at the actual registry boundary and retained marketplace, MCP Registry, deployment, and future LLC operation as separate workflows.
+
 ## 1.2.0 - 2026-08-16
 
 ### Added
