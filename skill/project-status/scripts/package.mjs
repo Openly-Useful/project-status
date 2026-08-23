@@ -67,32 +67,53 @@ function validateMetadata(metadata) {
   if (metadata.name !== "project-status") errors.push("package name must be project-status");
   if (!strictSemver(metadata.version)) errors.push("package version must be strict semver");
   if (typeof metadata.description !== "string" || !metadata.description.trim()) errors.push("package description is required");
-  if (typeof metadata.author?.name !== "string" || !metadata.author.name.trim()) errors.push("package author.name is required");
+  if (metadata.author?.name !== "Openly Useful") errors.push("package author.name must be Openly Useful");
+  if (metadata.author?.url !== "https://openlyuseful.org") errors.push("package author.url must be https://openlyuseful.org");
+  if (metadata.author?.email !== "hello@openlyuseful.org") errors.push("package author.email must be hello@openlyuseful.org");
+  const requiredPublicFields = ["homepage", "repository", "support", "privacy", "terms", "security", "publisherManifest"];
+  for (const field of requiredPublicFields) {
+    if (typeof metadata[field] !== "string" || !metadata[field].startsWith("https://")) errors.push(`package ${field} must be an HTTPS URL`);
+  }
+  if (metadata.license !== "Apache-2.0") errors.push("package license must be Apache-2.0");
   const interfaceValue = metadata.openai?.interface;
   for (const field of ["displayName", "shortDescription", "longDescription", "developerName", "category"]) {
     if (typeof interfaceValue?.[field] !== "string" || !interfaceValue[field].trim()) errors.push(`openai.interface.${field} is required`);
   }
   if (!Array.isArray(interfaceValue?.capabilities) || !interfaceValue.capabilities.every((value) => typeof value === "string" && value.trim())) errors.push("openai.interface.capabilities must be strings");
   if (!Array.isArray(interfaceValue?.defaultPrompt) || interfaceValue.defaultPrompt.length < 1 || interfaceValue.defaultPrompt.length > 3) errors.push("openai.interface.defaultPrompt must contain one to three prompts");
+  if (interfaceValue?.developerName !== "Openly Useful") errors.push("openai.interface.developerName must be Openly Useful");
   if (typeof metadata.claude?.description !== "string" || !metadata.claude.description.trim()) errors.push("claude.description is required");
   return errors;
 }
 
 export function expectedPluginManifests(metadata) {
+  const publication = {
+    author: metadata.author,
+    homepage: metadata.homepage,
+    repository: metadata.repository,
+    license: metadata.license,
+  };
   return {
     openai: {
       name: metadata.name,
       version: metadata.version,
       description: metadata.description,
-      author: metadata.author,
+      ...publication,
       skills: "./skills/",
-      interface: metadata.openai.interface,
+      interface: {
+        ...metadata.openai.interface,
+        websiteURL: metadata.homepage,
+        privacyPolicyURL: metadata.privacy,
+        termsOfServiceURL: metadata.terms,
+        supportURL: metadata.support,
+      },
     },
     claude: {
       name: metadata.name,
       version: metadata.version,
       description: metadata.claude.description,
-      author: metadata.author,
+      ...publication,
+      skills: "./skills/",
     },
   };
 }

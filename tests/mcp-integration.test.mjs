@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -11,6 +12,7 @@ const mcpRequire = createRequire(new URL("../packages/mcp/package.json", import.
 const { Client } = await import(pathToFileURL(mcpRequire.resolve("@modelcontextprotocol/client")).href);
 const { StdioClientTransport } = await import(pathToFileURL(mcpRequire.resolve("@modelcontextprotocol/client/stdio")).href);
 const serverEntry = join(projectRoot, "packages", "mcp", "dist", "index.js");
+const releaseVersion = readFileSync(join(projectRoot, "VERSION"), "utf8").trim();
 
 function textFrom(result) {
   return result.content.filter((item) => item.type === "text").map((item) => item.text).join("\n");
@@ -19,7 +21,7 @@ function textFrom(result) {
 async function connectClient() {
   const unrelatedCwd = await mkdtemp(join(tmpdir(), "project-status-mcp-cwd-"));
   const client = new Client(
-    { name: "project-status-integration-test", version: "1.0.0" },
+    { name: "project-status-integration-test", version: releaseVersion },
     {
       capabilities: { roots: {} },
       versionNegotiation: { mode: { pin: "2026-07-28" } },
@@ -48,12 +50,16 @@ test("MCP v2 stdio negotiates 2026-07-28, discovers roots, and serves only read-
 
   assert.equal(client.getProtocolEra(), "modern");
   assert.equal(client.getServerVersion().name, "project-status-mcp-server");
-  assert.equal(client.getServerVersion().version, "1.0.0");
+  assert.equal(client.getServerVersion().version, releaseVersion);
 
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map((tool) => tool.name).sort(), [
+    "project_status_get_activity",
     "project_status_get_dependencies",
+    "project_status_get_locks",
     "project_status_get_summary",
+    "project_status_get_usage",
+    "project_status_list_active_work",
     "project_status_list_tasks",
     "project_status_validate_manifest",
   ]);
@@ -136,7 +142,10 @@ test("MCP manifest resource is the core public projection and leaks no local pat
   t.after(() => client.close());
 
   const { resources } = await client.listResources();
-  assert.deepEqual(resources.map((resource) => resource.uri), ["project-status://manifest"]);
+  assert.deepEqual(resources.map((resource) => resource.uri).sort(), [
+    "project-status://activity",
+    "project-status://manifest",
+  ]);
   const result = await client.readResource({ uri: "project-status://manifest" });
   assert.equal(result.contents.length, 1);
   const text = result.contents[0].text;

@@ -1,0 +1,15 @@
+{
+  "author": {
+    "email": "hello@openlyuseful.org",
+    "name": "Openly Useful",
+    "url": "https://openlyuseful.org"
+  },
+  "description": "Portable live progress, RunGlance HUD presets, host adapters, explicit locks, truthful usage metrics, and verified final run receipts.",
+  "homepage": "https://github.com/Openly-Useful/project-status",
+  "license": "Apache-2.0",
+  "mcpServers": "./.mcp.json",
+  "name": "runglance",
+  "repository": "https://github.com/Openly-Useful/project-status",
+  "skills": "./skills/",
+  "version": "1.2.0"
+}

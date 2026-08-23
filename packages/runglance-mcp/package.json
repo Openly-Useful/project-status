@@ -1,0 +1,36 @@
+{
+  "name": "@openly-useful/runglance-mcp",
+  "version": "1.2.0",
+  "mcpName": "org.openlyuseful/runglance",
+  "description": "Read-only MCP access to local RunGlance progress, work, usage, locks, and run receipts.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "runglance-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist/index.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/toolchain.mjs build",
+    "typecheck": "node scripts/toolchain.mjs typecheck",
+    "test": "node --test tests/*.test.mjs",
+    "prepack": "npm run build && npm test",
+    "prepublishOnly": "node ../../scripts/assert-publish-ready.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Openly-Useful/project-status.git",
+    "directory": "packages/runglance-mcp"
+  },
+  "homepage": "https://openlyuseful.org",
+  "bugs": "https://openlyuseful.org/support",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

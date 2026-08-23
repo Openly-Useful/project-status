@@ -38,6 +38,14 @@ jobs:
         if: ${{ hashFiles('packages/mcp/package.json') != '' }}
         run: npm test --prefix packages/mcp --if-present
 
+      - name: Build standalone RunGlance MCP package
+        if: ${{ hashFiles('packages/runglance-mcp/package.json') != '' }}
+        run: npm run build --prefix packages/runglance-mcp
+
+      - name: Test standalone RunGlance MCP package
+        if: ${{ hashFiles('packages/runglance-mcp/package.json') != '' }}
+        run: npm test --prefix packages/runglance-mcp --if-present
+
       - name: Verify generated plugin wrappers
         run: node scripts/release-sync.mjs check
 
@@ -53,6 +61,9 @@ jobs:
       - name: Build and verify distribution artifacts
         shell: bash
         run: |
-          artifact_dir="$(mktemp -d)"
-          node scripts/package-skill.mjs build --output "$artifact_dir"
-          node scripts/package-skill.mjs verify --output "$artifact_dir"
+          project_status_artifact_dir="$(mktemp -d)"
+          runglance_artifact_dir="$(mktemp -d)"
+          node scripts/package-skill.mjs build --output "$project_status_artifact_dir"
+          node scripts/package-skill.mjs verify --output "$project_status_artifact_dir"
+          node scripts/package-runglance.mjs build --output "$runglance_artifact_dir"
+          node scripts/package-runglance.mjs verify --output "$runglance_artifact_dir"

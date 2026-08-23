@@ -94,6 +94,32 @@ test("serves persisted monitoring state separately and never probes on request",
   assert.equal((await response.json()).error, "monitor_state_unavailable");
 });
 
+test("serves activity only from an explicit binding and never fabricates it", async () => {
+  let assetCalls = 0;
+  const missing = await worker.fetch(new Request("https://example.test/api/activity"), {
+    ASSETS: { fetch: async () => { assetCalls += 1; return new Response("unexpected"); } },
+  });
+  assert.equal(missing.status, 503);
+  assert.equal(assetCalls, 0);
+
+  const response = await worker.fetch(new Request("https://example.test/api/activity"), {
+    ASSETS: { fetch: async () => new Response("unexpected", { status: 500 }) },
+    LATEST_ACTIVITY_STATE: {
+      schemaVersion: 1,
+      generatedAt: new Date().toISOString(),
+      thread: { state: "running", startedAt: null },
+      progress: { mode: "unavailable", completed: null, total: null, percent: null },
+      counts: { workflows: 0, skills: 0, agents: 0 },
+      usage: {},
+      lock: { state: "unlocked", owner: null },
+      freshness: { heartbeatAt: new Date().toISOString(), ageSeconds: 0 },
+      capabilities: {},
+    },
+  });
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).thread.state, "running");
+});
+
 test("emits the files required by Sites packaging", { skip: process.env.PROJECT_STATUS_SKIP_BUILD_ARTIFACT_TEST === "1" }, async () => {
   await access(new URL("../dist/client/index.html", import.meta.url));
   await access(new URL("../dist/server/index.js", import.meta.url));

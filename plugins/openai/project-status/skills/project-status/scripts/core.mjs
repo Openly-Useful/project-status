@@ -108,12 +108,12 @@ function toInstant(value, label = "time") {
   return candidate;
 }
 
-function resolveClock(options = {}, fallback) {
+function resolveClock(options = {}) {
   if (options.clock !== undefined && typeof options.clock !== "function") {
     throw new TypeError("options.clock must be a function");
   }
   const supplied = options.clock ? options.clock() : options.now;
-  return toInstant(supplied ?? fallback, "clock");
+  return toInstant(supplied ?? Date.now(), "clock");
 }
 
 export function safeRelativePath(value) {
@@ -494,7 +494,7 @@ function semanticValidation(collector, manifest, options) {
   }
 
   if (options.now !== undefined || options.clock !== undefined) {
-    const now = resolveClock(options, manifest.audit?.evidenceAsOf).getTime();
+    const now = resolveClock(options).getTime();
     const evidenceItems = Array.isArray(manifest.evidence) ? manifest.evidence : [];
     const timeFields = [
       ["$.audit.evidenceAsOf", manifest.audit?.evidenceAsOf],
@@ -596,7 +596,7 @@ function criticalPathUnchecked(manifest) {
 }
 
 function calculateStatusUnchecked(manifest, options = {}) {
-  const now = resolveClock(options, manifest.audit.evidenceAsOf);
+  const now = resolveClock(options);
   const nowMs = now.getTime();
   const tasks = taskRecords(manifest);
   const evidenceById = new Map(manifest.evidence.map((item) => [item.id, item]));
@@ -691,7 +691,7 @@ export function validateManifest(manifest, options = {}) {
   let result = baseline;
   let now = null;
   if (baseline.valid) {
-    now = resolveClock(options, manifest.audit.evidenceAsOf);
+    now = resolveClock(options);
     if (options.now !== undefined || options.clock !== undefined) result = runValidation(manifest, { now });
   }
   const digest = (() => { try { return manifestDigest(manifest); } catch { return null; } })();
@@ -712,7 +712,7 @@ export function calculateStatus(manifest, options = {}) {
   assertOptions(options, new Set(["now", "clock"]));
   let validation = runValidation(manifest);
   if (!validation.valid) throw new ManifestValidationError(validation.errors);
-  const now = resolveClock(options, manifest.audit.evidenceAsOf);
+  const now = resolveClock(options);
   if (options.now !== undefined || options.clock !== undefined) validation = runValidation(manifest, { now });
   if (!validation.valid) throw new ManifestValidationError(validation.errors);
   return calculateStatusUnchecked(manifest, { now });

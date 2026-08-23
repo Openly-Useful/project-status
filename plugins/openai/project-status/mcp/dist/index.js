@@ -10051,14 +10051,14 @@ function inputRequiredRoundsExceededMessage(method, maxRounds) {
   return `Multi-round-trip request '${method}' still required input after ${maxRounds} rounds (inputRequired.maxRounds)`;
 }
 function sleep(ms, signal) {
-  return new Promise((resolve2, reject) => {
+  return new Promise((resolve3, reject) => {
     if (signal?.aborted) {
       reject(signal.reason instanceof SdkError ? signal.reason : new SdkError(SdkErrorCode.RequestTimeout, String(signal.reason)));
       return;
     }
     const timer = setTimeout(() => {
       signal?.removeEventListener("abort", onAbort);
-      resolve2();
+      resolve3();
     }, ms);
     const onAbort = () => {
       clearTimeout(timer);
@@ -10852,7 +10852,7 @@ var Protocol = class {
     const flowStartedAt = Date.now();
     let onAbort;
     let cleanupMessageId;
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve3, reject) => {
       const earlyReject = (error2) => {
         reject(error2);
       };
@@ -10920,7 +10920,7 @@ var Protocol = class {
         }
         if (decoded.kind === "invalid") return reject(decoded.error);
         if (decoded.kind === "input_required") {
-          if (options?.allowInputRequired === true) return resolve2(manualInputRequiredValue(decoded));
+          if (options?.allowInputRequired === true) return resolve3(manualInputRequiredValue(decoded));
           const flow = {
             codec,
             request,
@@ -10932,11 +10932,11 @@ var Protocol = class {
               params
             }, resultSchema, legOptions)
           };
-          return resolve2(this._resolveNonCompleteResult(decoded, flow));
+          return resolve3(this._resolveNonCompleteResult(decoded, flow));
         }
         const result = decoded.result;
         validateStandardSchema(resultSchema, result).then((parseResult) => {
-          if (parseResult.success) resolve2(parseResult.data);
+          if (parseResult.success) resolve3(parseResult.data);
           else reject(new SdkError(SdkErrorCode.InvalidResult, `Invalid result for ${request.method}: ${parseResult.error}`));
         }, reject);
       });
@@ -13848,7 +13848,7 @@ var require_compile = /* @__PURE__ */ __commonJSMin(((exports) => {
     ref = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, ref);
     const schOrFunc = root.refs[ref];
     if (schOrFunc) return schOrFunc;
-    let _sch = resolve2.call(this, root, ref);
+    let _sch = resolve3.call(this, root, ref);
     if (_sch === void 0) {
       const schema = (_a3 = root.localRefs) === null || _a3 === void 0 ? void 0 : _a3[ref];
       const { schemaId } = this.opts;
@@ -13874,7 +13874,7 @@ var require_compile = /* @__PURE__ */ __commonJSMin(((exports) => {
   function sameSchemaEnv(s1, s2) {
     return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
   }
-  function resolve2(root, ref) {
+  function resolve3(root, ref) {
     let sch;
     while (typeof (sch = this.refs[ref]) == "string") ref = sch;
     return sch || this.schemas[ref] || resolveSchema.call(this, root, ref);
@@ -14324,7 +14324,7 @@ var require_fast_uri = /* @__PURE__ */ __commonJSMin(((exports, module) => {
     else if (typeof uri === "object") uri = parse3(serialize(uri, options), options);
     return uri;
   }
-  function resolve2(baseURI, relativeURI, options) {
+  function resolve3(baseURI, relativeURI, options) {
     const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
     const resolved = resolveComponent(parse3(baseURI, schemelessOptions), parse3(relativeURI, schemelessOptions), schemelessOptions, true);
     schemelessOptions.skipEscape = true;
@@ -14498,7 +14498,7 @@ var require_fast_uri = /* @__PURE__ */ __commonJSMin(((exports, module) => {
   const fastUri = {
     SCHEMES,
     normalize,
-    resolve: resolve2,
+    resolve: resolve3,
     resolveComponent,
     equal,
     serialize,
@@ -19871,7 +19871,7 @@ var StdioServerTransport = class {
   }
   send(message) {
     if (this._closed) return Promise.reject(/* @__PURE__ */ new Error("StdioServerTransport is closed"));
-    return new Promise((resolve2, reject) => {
+    return new Promise((resolve3, reject) => {
       const json = serializeMessage(message);
       let settled = false;
       const onError = (error2) => {
@@ -19886,14 +19886,14 @@ var StdioServerTransport = class {
         settled = true;
         this._stdout.off("error", onError);
         this._stdout.off("drain", onDrain);
-        resolve2();
+        resolve3();
       };
       this._stdout.once("error", onError);
       if (this._stdout.write(json)) {
         if (settled) return;
         settled = true;
         this._stdout.off("error", onError);
-        resolve2();
+        resolve3();
       } else if (!settled) this._stdout.once("drain", onDrain);
     });
   }
@@ -19947,14 +19947,14 @@ var StdioConnectionChannel = class {
   */
   async whenRequestsAnswered(timeoutMs) {
     if (this._closed || this._pendingRequests.size === 0) return true;
-    return await new Promise((resolve2) => {
+    return await new Promise((resolve3) => {
       const waiter = () => {
         clearTimeout(timer);
-        resolve2(true);
+        resolve3(true);
       };
       const timer = setTimeout(() => {
         this._drainWaiters = this._drainWaiters.filter((pending) => pending !== waiter);
-        resolve2(false);
+        resolve3(false);
       }, timeoutMs);
       this._drainWaiters.push(waiter);
     });
@@ -20425,6 +20425,423 @@ function boundedValidationErrors(errors, limit = 50) {
   return { errors: errors.slice(0, limit), truncated: errors.length > limit };
 }
 
+// src/activity-adapter.ts
+import { createHash } from "node:crypto";
+import { readFile as readFile2 } from "node:fs/promises";
+import { isAbsolute as isAbsolute2, resolve as resolve2 } from "node:path";
+var MAX_ACTIVITY_FILE_CHARACTERS = 2e6;
+var MAX_ENTITIES = 1e3;
+var MAX_VERIFICATIONS = 250;
+var MAX_RECEIPT_ITEMS = 50;
+var MAX_LABEL_CHARACTERS = 160;
+var MAX_SUMMARY_CHARACTERS = 2e3;
+var EntityKind = _enum(["thread", "workflow", "skill", "agent", "tool"]);
+var ActivityState = _enum(["queued", "running", "waiting", "completed", "failed", "stopped"]);
+var ThreadState = _enum(["ready", "running", "waiting", "locked", "stale", "unknown", "failed", "stopped"]);
+var LockState = _enum(["unlocked", "locked", "stale", "unknown"]);
+var TruthClass = _enum(["exact", "derived", "estimated", "unknown"]);
+var IsoTimestamp = string2().datetime({ offset: true }).nullable();
+var OptionalCount = number2().int().nonnegative().nullable();
+var OptionalSeconds = number2().nonnegative().finite().nullable();
+var OptionalPercent = number2().min(0).max(100).finite().nullable();
+var MetricInput = object({
+  value: OptionalPercent,
+  truthClass: TruthClass,
+  source: string2().max(240),
+  observedAt: IsoTimestamp,
+  unit: string2().max(64).nullable().optional()
+});
+var EntityProgressInput = object({
+  completed: number2().nonnegative().finite(),
+  total: number2().nonnegative().finite()
+}).nullable();
+var SnapshotProgressInput = object({
+  mode: _enum(["determinate", "indeterminate", "unavailable"]),
+  completed: number2().nonnegative().finite().nullable(),
+  total: number2().nonnegative().finite().nullable(),
+  percent: OptionalPercent
+});
+var EntityInput = object({
+  id: string2().min(1).max(160),
+  kind: EntityKind,
+  name: string2().max(240).nullable(),
+  parentId: string2().max(160).nullable(),
+  state: ActivityState,
+  progress: EntityProgressInput,
+  metrics: record(string2(), unknown()).optional(),
+  startedAt: IsoTimestamp,
+  completedAt: IsoTimestamp,
+  heartbeatAt: IsoTimestamp,
+  updatedAt: IsoTimestamp
+});
+var VerificationInput = object({
+  id: string2().min(1).max(160),
+  name: string2().min(1).max(240),
+  status: _enum(["running", "passed", "failed", "stopped", "unknown"]),
+  exitCode: number2().int().min(0).max(255).nullable(),
+  durationMs: number2().nonnegative().finite().nullable(),
+  startedAt: IsoTimestamp,
+  completedAt: IsoTimestamp,
+  command: array(string2()).optional(),
+  output: string2().nullable().optional(),
+  rerun: string2().nullable().optional()
+});
+var OutcomeInput = object({
+  status: _enum(["complete", "partial", "failed", "stopped"]),
+  summary: string2().max(2e3).nullable(),
+  fixes: array(string2().max(2e3)).max(50),
+  remaining: array(string2().max(2e3)).max(50),
+  observedAt: string2().datetime({ offset: true })
+}).nullable();
+var ReceiptVerificationInput = object({
+  id: string2().min(1).max(160),
+  name: string2().min(1).max(240),
+  status: _enum(["PASS", "FAIL", "STOPPED", "UNKNOWN"]),
+  exitCode: number2().int().min(0).max(255).nullable(),
+  durationMs: number2().nonnegative().finite().nullable(),
+  command: array(string2()).optional(),
+  rerun: string2().nullable().optional()
+});
+var ReceiptInput = object({
+  schemaVersion: number2().int().positive(),
+  sessionId: string2().max(160).nullable(),
+  completedAt: string2().datetime({ offset: true }),
+  status: _enum(["complete", "partial", "failed", "stopped"]),
+  taskResult: _enum(["complete", "partial", "failed", "stopped"]),
+  projectReadiness: object({
+    status: literal("not_assessed"),
+    value: _null3(),
+    source: _null3()
+  }),
+  summary: string2().max(2e3).nullable(),
+  fixes: array(string2().max(2e3)).max(50),
+  verifications: array(ReceiptVerificationInput).max(MAX_VERIFICATIONS),
+  remaining: array(string2().max(2e3)).max(50),
+  duration: string2().max(32),
+  counts: object({
+    workflows: number2().int().nonnegative(),
+    skills: number2().int().nonnegative(),
+    agents: number2().int().nonnegative()
+  })
+});
+var SnapshotInput = object({
+  schemaVersion: number2().int().positive(),
+  sessionId: string2().max(160).nullable(),
+  generatedAt: string2().datetime({ offset: true }),
+  thread: object({
+    state: ThreadState,
+    startedAt: IsoTimestamp
+  }),
+  progress: SnapshotProgressInput,
+  counts: object({
+    workflows: OptionalCount,
+    skills: OptionalCount,
+    agents: OptionalCount,
+    tools: OptionalCount.optional()
+  }),
+  usage: object({
+    contextRemainingPercent: MetricInput,
+    quotaRemainingPercent: MetricInput,
+    taskBudgetRemainingPercent: MetricInput
+  }),
+  lock: object({
+    state: LockState,
+    owner: string2().max(240).nullable(),
+    observedAt: IsoTimestamp
+  }),
+  freshness: object({
+    heartbeatAt: IsoTimestamp,
+    ageSeconds: OptionalSeconds
+  }),
+  entities: array(EntityInput).max(MAX_ENTITIES),
+  activeWork: array(EntityInput).max(200).optional(),
+  finishedWork: array(EntityInput).max(200).optional(),
+  verifications: array(VerificationInput).max(MAX_VERIFICATIONS),
+  outcome: OutcomeInput,
+  lastReceipt: ReceiptInput.nullable().optional(),
+  capabilities: record(string2().max(100), boolean2())
+});
+var ActivityAccessError = class extends Error {
+  constructor(code, message, nextAction) {
+    super(message);
+    this.code = code;
+    this.nextAction = nextAction;
+    this.name = "ActivityAccessError";
+  }
+};
+function redactText(value, limit) {
+  return value.replace(/\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi, "[credential redacted]").replace(/\b(?:sk|ghp|github_pat|xox[baprs])-[_A-Za-z0-9-]{8,}\b/g, "[credential redacted]").replace(/\b[A-Z][A-Z0-9_]*(?:TOKEN|SECRET|PASSWORD|API_KEY)\s*=\s*[^\s]+/g, "[credential redacted]").replace(/(?:file:\/\/)?\/(?:Users|home)\/[^\s/]+/g, "[home]").replace(/(?:file:\/\/)?\/(?:private|var|tmp)\/[^\s]+/g, "[path]").replace(/[A-Za-z]:\\Users\\[^\s\\]+/g, "[home]").replace(/([a-z][a-z0-9+.-]*:\/\/)([^\s/@:]+):([^\s/@]+)@/gi, "$1[credentials]@").slice(0, limit);
+}
+function safeIdentifier(value, fallback) {
+  if (value === null) return null;
+  const normalized = value.trim();
+  if (/^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/.test(normalized)) return normalized;
+  const digest = createHash("sha256").update(normalized).digest("hex").slice(0, 12);
+  return `${fallback}-${digest}`;
+}
+function publicMetric(metric) {
+  return {
+    value: metric.value,
+    truthClass: metric.truthClass,
+    source: safeIdentifier(metric.source, "unknown") ?? "unknown",
+    observedAt: metric.observedAt,
+    unit: metric.unit === void 0 ? null : redactText(metric.unit ?? "", 64)
+  };
+}
+function entityProgress(progress) {
+  if (progress === null) return { mode: "unavailable", completed: null, total: null, percent: null };
+  if (progress.total <= 0) return { mode: "indeterminate", completed: null, total: null, percent: null };
+  return {
+    mode: "determinate",
+    completed: progress.completed,
+    total: progress.total,
+    percent: Math.round(progress.completed / progress.total * 1e3) / 10
+  };
+}
+function elapsedSeconds(startedAt, endAt) {
+  if (startedAt === null) return null;
+  return Math.max(0, Math.floor((Date.parse(endAt) - Date.parse(startedAt)) / 1e3));
+}
+function publicWorkItem(entity, generatedAt) {
+  return {
+    id: safeIdentifier(entity.id, "redacted") ?? "redacted",
+    kind: entity.kind,
+    label: redactText(entity.name ?? entity.id, MAX_LABEL_CHARACTERS),
+    state: entity.state,
+    parentId: safeIdentifier(entity.parentId, "redacted"),
+    progress: entityProgress(entity.progress),
+    startedAt: entity.startedAt,
+    updatedAt: entity.updatedAt,
+    completedAt: entity.completedAt,
+    elapsedSeconds: elapsedSeconds(entity.startedAt, entity.completedAt ?? generatedAt)
+  };
+}
+function publicLock(lock) {
+  return {
+    id: "thread",
+    state: lock.state,
+    owner: safeIdentifier(lock.owner, "redacted"),
+    observedAt: lock.observedAt
+  };
+}
+function verificationStatus(status) {
+  if (status === "passed") return "PASS";
+  if (status === "failed") return "FAIL";
+  if (status === "stopped") return "STOPPED";
+  return "UNKNOWN";
+}
+function publicReceipt(snapshot) {
+  const receipt = snapshot.lastReceipt;
+  if (receipt !== void 0 && receipt !== null) {
+    return {
+      schemaVersion: receipt.schemaVersion,
+      sessionId: safeIdentifier(receipt.sessionId, "redacted"),
+      completedAt: receipt.completedAt,
+      status: receipt.status,
+      taskResult: receipt.taskResult,
+      projectReadiness: receipt.projectReadiness,
+      summary: receipt.summary === null ? null : redactText(receipt.summary, MAX_SUMMARY_CHARACTERS),
+      fixes: receipt.fixes.slice(0, MAX_RECEIPT_ITEMS).map((item) => redactText(item, MAX_LABEL_CHARACTERS)),
+      verifications: receipt.verifications.slice(0, MAX_RECEIPT_ITEMS).map((item) => ({
+        id: safeIdentifier(item.id, "redacted") ?? "redacted",
+        name: redactText(item.name, MAX_LABEL_CHARACTERS),
+        status: item.status,
+        exitCode: item.exitCode,
+        durationMs: item.durationMs
+      })),
+      remaining: receipt.remaining.slice(0, MAX_RECEIPT_ITEMS).map((item) => redactText(item, MAX_LABEL_CHARACTERS)),
+      duration: receipt.duration,
+      counts: receipt.counts
+    };
+  }
+  if (snapshot.outcome === null) return null;
+  const outcome = snapshot.outcome;
+  const durationSeconds = elapsedSeconds(snapshot.thread.startedAt, outcome.observedAt);
+  const duration3 = durationSeconds === null ? "—" : `${String(Math.floor(durationSeconds / 60)).padStart(2, "0")}:${String(durationSeconds % 60).padStart(2, "0")}`;
+  return {
+    schemaVersion: snapshot.schemaVersion,
+    sessionId: safeIdentifier(snapshot.sessionId, "redacted"),
+    completedAt: outcome.observedAt,
+    status: outcome.status,
+    taskResult: outcome.status,
+    projectReadiness: { status: "not_assessed", value: null, source: null },
+    summary: outcome.summary === null ? null : redactText(outcome.summary, MAX_SUMMARY_CHARACTERS),
+    fixes: outcome.fixes.slice(0, MAX_RECEIPT_ITEMS).map((item) => redactText(item, MAX_LABEL_CHARACTERS)),
+    verifications: snapshot.verifications.slice(0, MAX_RECEIPT_ITEMS).map((item) => ({
+      id: safeIdentifier(item.id, "redacted") ?? "redacted",
+      name: redactText(item.name, MAX_LABEL_CHARACTERS),
+      status: verificationStatus(item.status),
+      exitCode: item.exitCode,
+      durationMs: item.durationMs
+    })),
+    remaining: outcome.remaining.slice(0, MAX_RECEIPT_ITEMS).map((item) => redactText(item, MAX_LABEL_CHARACTERS)),
+    duration: duration3,
+    counts: {
+      workflows: snapshot.entities.filter((entity) => entity.kind === "workflow").length,
+      skills: snapshot.entities.filter((entity) => entity.kind === "skill").length,
+      agents: snapshot.entities.filter((entity) => entity.kind === "agent").length
+    }
+  };
+}
+function resolveActivityPath(options = {}) {
+  const environment = options.environment ?? process.env;
+  const cwd = options.cwd ?? process.cwd();
+  const configured = options.explicitPath ?? environment.RUNGLANCE_ACTIVITY_FILE ?? environment.PROJECT_STATUS_ACTIVITY_FILE;
+  if (configured !== void 0) return isAbsolute2(configured) ? configured : resolve2(cwd, configured);
+  return void 0;
+}
+function createFileActivitySource(filePath) {
+  return {
+    async load() {
+      if (filePath === void 0) {
+        throw new ActivityAccessError(
+          "activity_unavailable",
+          "No RunGlance activity snapshot is configured.",
+          "Set RUNGLANCE_ACTIVITY_FILE or RUNGLANCE_RUNTIME_DIR, then start RunGlance."
+        );
+      }
+      let source;
+      try {
+        source = await readFile2(filePath, "utf8");
+      } catch (error2) {
+        const code = error2.code;
+        if (code === "ENOENT") {
+          throw new ActivityAccessError(
+            "activity_unavailable",
+            "The configured RunGlance activity snapshot is not available.",
+            "Start RunGlance or confirm the configured snapshot file exists."
+          );
+        }
+        throw new ActivityAccessError(
+          "activity_unreadable",
+          "The configured RunGlance activity snapshot could not be read.",
+          "Confirm the MCP process has read permission for the configured activity snapshot."
+        );
+      }
+      if (source.length > MAX_ACTIVITY_FILE_CHARACTERS) {
+        throw new ActivityAccessError(
+          "activity_snapshot_too_large",
+          "The configured activity snapshot exceeds the 2,000,000-character input limit.",
+          "Reduce retained entity and verification data before retrying."
+        );
+      }
+      try {
+        return JSON.parse(source);
+      } catch {
+        throw new ActivityAccessError(
+          "activity_invalid_json",
+          "The configured RunGlance activity snapshot is not valid JSON.",
+          "Repair or regenerate the activity snapshot, then retry."
+        );
+      }
+    }
+  };
+}
+function configuredRuntimeDirectory(options = {}) {
+  const environment = options.environment ?? process.env;
+  const configured = environment.RUNGLANCE_RUNTIME_DIR ?? environment.PROJECT_STATUS_RUNTIME_DIR;
+  if (configured === void 0) return void 0;
+  const cwd = options.cwd ?? process.cwd();
+  return isAbsolute2(configured) ? configured : resolve2(cwd, configured);
+}
+function createRuntimeActivitySource(runtimeDirectory) {
+  return {
+    async load() {
+      try {
+        return await createFileActivitySource(resolve2(runtimeDirectory, "activity-snapshot.json")).load();
+      } catch (error2) {
+        if (!(error2 instanceof ActivityAccessError) || error2.code !== "activity_unavailable") throw error2;
+      }
+      let activeSource;
+      try {
+        activeSource = await readFile2(resolve2(runtimeDirectory, "active-session.json"), "utf8");
+      } catch (error2) {
+        const code = error2.code;
+        if (code === "ENOENT") {
+          throw new ActivityAccessError(
+            "activity_unavailable",
+            "No active RunGlance session is available.",
+            "Start RunGlance or set RUNGLANCE_ACTIVITY_FILE to a retained snapshot."
+          );
+        }
+        throw new ActivityAccessError(
+          "activity_unreadable",
+          "The active RunGlance session marker could not be read.",
+          "Confirm the MCP process has read permission for the configured runtime directory."
+        );
+      }
+      let sessionId;
+      try {
+        const active = JSON.parse(activeSource);
+        if (typeof active.sessionId === "string" && /^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$/.test(active.sessionId)) {
+          sessionId = active.sessionId;
+        }
+      } catch {
+      }
+      if (sessionId === void 0) {
+        throw new ActivityAccessError(
+          "activity_snapshot_invalid",
+          "The active RunGlance session marker is invalid.",
+          "Restart the activity session to regenerate active-session.json."
+        );
+      }
+      return createFileActivitySource(resolve2(runtimeDirectory, "sessions", `${sessionId}.snapshot.json`)).load();
+    }
+  };
+}
+function createConfiguredActivitySource(options = {}) {
+  const filePath = resolveActivityPath(options);
+  if (filePath !== void 0) return createFileActivitySource(filePath);
+  const runtimeDirectory = configuredRuntimeDirectory(options);
+  if (runtimeDirectory !== void 0) return createRuntimeActivitySource(runtimeDirectory);
+  return createFileActivitySource(void 0);
+}
+function createActivityService(source) {
+  return {
+    async load() {
+      const parsed = SnapshotInput.safeParse(await source.load());
+      if (!parsed.success) {
+        throw new ActivityAccessError(
+          "activity_snapshot_invalid",
+          "The configured activity snapshot does not match the supported contract.",
+          "Regenerate the snapshot with a compatible RunGlance adapter."
+        );
+      }
+      const input = parsed.data;
+      const work = input.entities.map((entity) => publicWorkItem(entity, input.generatedAt));
+      const activeWork = input.activeWork === void 0 ? work.filter((item) => item.state === "queued" || item.state === "running" || item.state === "waiting") : input.activeWork.map((entity) => publicWorkItem(entity, input.generatedAt));
+      const finishedWork = input.finishedWork === void 0 ? work.filter((item) => item.state === "completed" || item.state === "failed" || item.state === "stopped") : input.finishedWork.map((entity) => publicWorkItem(entity, input.generatedAt));
+      return {
+        schemaVersion: input.schemaVersion,
+        sessionId: safeIdentifier(input.sessionId, "redacted"),
+        generatedAt: input.generatedAt,
+        thread: input.thread,
+        progress: input.progress,
+        counts: {
+          workflows: input.counts.workflows,
+          skills: input.counts.skills,
+          agents: input.counts.agents,
+          tools: input.counts.tools ?? null
+        },
+        usage: {
+          contextRemainingPercent: publicMetric(input.usage.contextRemainingPercent),
+          quotaRemainingPercent: publicMetric(input.usage.quotaRemainingPercent),
+          taskBudgetRemainingPercent: publicMetric(input.usage.taskBudgetRemainingPercent)
+        },
+        lock: publicLock(input.lock),
+        locks: [publicLock(input.lock)],
+        freshness: input.freshness,
+        capabilities: Object.fromEntries(
+          Object.entries(input.capabilities).filter(([key]) => /^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$/.test(key)).sort(([left], [right]) => left.localeCompare(right))
+        ),
+        activeWork,
+        finishedWork,
+        lastReceipt: publicReceipt(input)
+      };
+    }
+  };
+}
+
 // src/server.ts
 var READ_ONLY_ANNOTATIONS = Object.freeze({
   readOnlyHint: true,
@@ -20434,6 +20851,8 @@ var READ_ONLY_ANNOTATIONS = Object.freeze({
 });
 var TASK_STATUSES = ["complete", "in_progress", "blocked", "not_started"];
 var MAX_RESOURCE_CHARACTERS = 512e3;
+var MAX_ACTIVITY_RESOURCE_CHARACTERS = 128e3;
+var MAX_ACTIVITY_RESOURCE_ITEMS = 50;
 var ROOTS_RESPONSE_KEY = "project_status_workspace_roots";
 var EmptyInput = object({}).strict();
 var ErrorOutput = object({
@@ -20651,6 +21070,124 @@ var DependenciesOutput = object({
   nextOffset: number2().nullable(),
   dependencies: array(PublicDependency)
 });
+var ActivityProgressOutput = object({
+  mode: _enum(["determinate", "indeterminate", "unavailable"]),
+  completed: number2().nonnegative().nullable(),
+  total: number2().nonnegative().nullable(),
+  percent: number2().min(0).max(100).nullable()
+}).strict();
+var ActivityMetricOutput = object({
+  value: number2().min(0).max(100).nullable(),
+  truthClass: _enum(["exact", "derived", "estimated", "unknown"]),
+  source: string2(),
+  observedAt: string2().nullable(),
+  unit: string2().nullable()
+}).strict();
+var ActivityUsageOutput = object({
+  contextRemainingPercent: ActivityMetricOutput,
+  quotaRemainingPercent: ActivityMetricOutput,
+  taskBudgetRemainingPercent: ActivityMetricOutput
+}).strict();
+var ActivityLockOutput = object({
+  id: string2(),
+  state: _enum(["unlocked", "locked", "stale", "unknown"]),
+  owner: string2().nullable(),
+  observedAt: string2().nullable()
+}).strict();
+var ActivityVerificationOutput = object({
+  id: string2(),
+  name: string2(),
+  status: _enum(["PASS", "FAIL", "STOPPED", "UNKNOWN"]),
+  exitCode: number2().int().nullable(),
+  durationMs: number2().nonnegative().nullable()
+}).strict();
+var ActivityReceiptOutput = object({
+  schemaVersion: number2().int().positive(),
+  sessionId: string2().nullable(),
+  completedAt: string2(),
+  status: _enum(["complete", "partial", "failed", "stopped", "unknown"]),
+  taskResult: _enum(["complete", "partial", "failed", "stopped", "unknown"]),
+  projectReadiness: object({
+    status: literal("not_assessed"),
+    value: _null3(),
+    source: _null3()
+  }).strict(),
+  summary: string2().nullable(),
+  fixes: array(string2()),
+  verifications: array(ActivityVerificationOutput),
+  remaining: array(string2()),
+  duration: string2(),
+  counts: object({
+    workflows: number2().int().nonnegative(),
+    skills: number2().int().nonnegative(),
+    agents: number2().int().nonnegative()
+  }).strict()
+}).strict();
+var ActivitySummaryOutput = object({
+  ok: literal(true),
+  schemaVersion: number2().int().positive(),
+  sessionId: string2().nullable(),
+  generatedAt: string2(),
+  thread: object({
+    state: _enum(["ready", "running", "waiting", "locked", "stale", "unknown", "failed", "stopped"]),
+    startedAt: string2().nullable()
+  }).strict(),
+  progress: ActivityProgressOutput,
+  counts: object({
+    workflows: number2().int().nonnegative().nullable(),
+    skills: number2().int().nonnegative().nullable(),
+    agents: number2().int().nonnegative().nullable(),
+    tools: number2().int().nonnegative().nullable()
+  }).strict(),
+  usage: ActivityUsageOutput,
+  lock: ActivityLockOutput,
+  freshness: object({
+    heartbeatAt: string2().nullable(),
+    ageSeconds: number2().nonnegative().nullable()
+  }).strict(),
+  capabilities: record(string2(), boolean2()),
+  lastReceipt: ActivityReceiptOutput.nullable()
+}).strict();
+var ActivityWorkOutput = object({
+  id: string2(),
+  kind: _enum(["thread", "workflow", "skill", "agent", "tool"]),
+  label: string2(),
+  state: _enum(["queued", "running", "waiting", "completed", "failed", "stopped"]),
+  parentId: string2().nullable(),
+  progress: ActivityProgressOutput,
+  startedAt: string2().nullable(),
+  updatedAt: string2().nullable(),
+  completedAt: string2().nullable(),
+  elapsedSeconds: number2().nonnegative().nullable()
+}).strict();
+var ListActiveWorkInput = object({
+  scope: _enum(["active", "finished", "all"]).default("active").describe("Select currently active work, terminal finished work, or both."),
+  kind: _enum(["thread", "workflow", "skill", "agent", "tool"]).optional().describe("Optional exact activity entity kind filter."),
+  state: _enum(["queued", "running", "waiting", "completed", "failed", "stopped"]).optional().describe("Optional exact lifecycle state filter."),
+  limit: number2().int().min(1).max(100).default(25).describe("Maximum work items to return (1-100)."),
+  offset: number2().int().min(0).default(0).describe("Number of matching work items to skip.")
+}).strict();
+var ListActiveWorkOutput = object({
+  ok: literal(true),
+  scope: _enum(["active", "finished", "all"]),
+  total: number2().int().nonnegative(),
+  count: number2().int().nonnegative(),
+  offset: number2().int().nonnegative(),
+  hasMore: boolean2(),
+  nextOffset: number2().int().nonnegative().nullable(),
+  work: array(ActivityWorkOutput)
+}).strict();
+var ActivityUsageToolOutput = object({
+  ok: literal(true),
+  generatedAt: string2(),
+  usage: ActivityUsageOutput
+}).strict();
+var ActivityLocksToolOutput = object({
+  ok: literal(true),
+  generatedAt: string2(),
+  count: number2().int().nonnegative(),
+  locks: array(ActivityLockOutput)
+}).strict();
 function taskRecords(manifest) {
   return manifest.phases.flatMap((phase) => phase.tasks.map((task) => ({ ...task, phaseId: phase.id, phaseName: phase.name })));
 }
@@ -20676,6 +21213,129 @@ function publicTask(task) {
     },
     gateCount: task.gateRefs.length
   };
+}
+function activitySummary(snapshot) {
+  return {
+    ok: true,
+    schemaVersion: snapshot.schemaVersion,
+    sessionId: snapshot.sessionId,
+    generatedAt: snapshot.generatedAt,
+    thread: snapshot.thread,
+    progress: snapshot.progress,
+    counts: snapshot.counts,
+    usage: snapshot.usage,
+    lock: snapshot.lock,
+    freshness: snapshot.freshness,
+    capabilities: snapshot.capabilities,
+    lastReceipt: snapshot.lastReceipt
+  };
+}
+function registerActivitySummary(server, activity) {
+  server.registerTool(
+    "project_status_get_activity",
+    {
+      title: "Get Project Status Activity",
+      description: "Read the optional local activity snapshot and return its thread state, progress, live counts, usage truth classes, lock, freshness, capabilities, and bounded last verification receipt. No readiness value is calculated or changed.",
+      inputSchema: EmptyInput,
+      outputSchema: ActivitySummaryOutput,
+      annotations: { title: "Get Project Status Activity", ...READ_ONLY_ANNOTATIONS }
+    },
+    async () => {
+      try {
+        const snapshot = await activity.load();
+        const output = activitySummary(snapshot);
+        const counts = snapshot.counts;
+        const label = (value) => value === null ? "—" : String(value);
+        return success(
+          output,
+          `Activity: ${snapshot.thread.state}. Workflows ${label(counts.workflows)}, skills ${label(counts.skills)}, agents ${label(counts.agents)}, tools ${label(counts.tools)}. Snapshot ${snapshot.generatedAt}.`
+        );
+      } catch (error2) {
+        return failure(error2);
+      }
+    }
+  );
+}
+function registerActiveWork(server, activity) {
+  server.registerTool(
+    "project_status_list_active_work",
+    {
+      title: "List Project Status Activity Work",
+      description: "List bounded, redacted workflow, skill, agent, thread, and tool activity. Defaults to active work; scope can include finished work. Supports exact kind/state filters and offset pagination.",
+      inputSchema: ListActiveWorkInput,
+      outputSchema: ListActiveWorkOutput,
+      annotations: { title: "List Project Status Activity Work", ...READ_ONLY_ANNOTATIONS }
+    },
+    async ({ scope, kind, state, limit, offset }) => {
+      try {
+        const snapshot = await activity.load();
+        const candidates = scope === "active" ? snapshot.activeWork : scope === "finished" ? snapshot.finishedWork : [...snapshot.activeWork, ...snapshot.finishedWork];
+        const matches = candidates.filter((item) => (kind === void 0 || item.kind === kind) && (state === void 0 || item.state === state));
+        const page = matches.slice(offset, offset + limit);
+        const hasMore = offset + page.length < matches.length;
+        const output = {
+          ok: true,
+          scope,
+          total: matches.length,
+          count: page.length,
+          offset,
+          hasMore,
+          nextOffset: hasMore ? offset + page.length : null,
+          work: page
+        };
+        return success(output, `Found ${matches.length} matching ${scope} work item(s); returning ${page.length} from offset ${offset}.`);
+      } catch (error2) {
+        return failure(error2);
+      }
+    }
+  );
+}
+function registerActivityUsage(server, activity) {
+  server.registerTool(
+    "project_status_get_usage",
+    {
+      title: "Get Project Status Usage",
+      description: "Read context, provider-quota, and task-budget remaining percentages from the optional activity snapshot. Each metric preserves exact, derived, estimated, or unknown truth and never substitutes zero for unavailable data.",
+      inputSchema: EmptyInput,
+      outputSchema: ActivityUsageToolOutput,
+      annotations: { title: "Get Project Status Usage", ...READ_ONLY_ANNOTATIONS }
+    },
+    async () => {
+      try {
+        const snapshot = await activity.load();
+        const output = { ok: true, generatedAt: snapshot.generatedAt, usage: snapshot.usage };
+        return success(output, `Usage snapshot from ${snapshot.generatedAt}; unavailable metrics remain explicitly unknown.`);
+      } catch (error2) {
+        return failure(error2);
+      }
+    }
+  );
+}
+function registerActivityLocks(server, activity) {
+  server.registerTool(
+    "project_status_get_locks",
+    {
+      title: "Get Project Status Locks",
+      description: "Read the bounded, redacted local thread-lock observation. A stale or unknown observation is not reported as unlocked.",
+      inputSchema: EmptyInput,
+      outputSchema: ActivityLocksToolOutput,
+      annotations: { title: "Get Project Status Locks", ...READ_ONLY_ANNOTATIONS }
+    },
+    async () => {
+      try {
+        const snapshot = await activity.load();
+        const output = {
+          ok: true,
+          generatedAt: snapshot.generatedAt,
+          count: snapshot.locks.length,
+          locks: snapshot.locks
+        };
+        return success(output, `Lock state: ${snapshot.lock.state}. Observation: ${snapshot.lock.observedAt ?? "unknown"}.`);
+      } catch (error2) {
+        return failure(error2);
+      }
+    }
+  );
 }
 function registerSummary(server, resolveService) {
   server.registerTool(
@@ -20878,23 +21538,73 @@ function registerManifestResource(server, resolveService) {
     }
   );
 }
+function registerActivityResource(server, activity) {
+  server.registerResource(
+    "project-status-activity",
+    "project-status://activity",
+    {
+      title: "Project Status activity snapshot",
+      description: "Bounded public projection of optional local activity, including separate active and finished work lists. Prompt, transcript, command, environment, credential, and raw path fields are omitted or redacted.",
+      mimeType: "application/json",
+      cacheHint: { ttlMs: 1e3, cacheScope: "private" }
+    },
+    async (uri) => {
+      try {
+        const snapshot = await activity.load();
+        const activeWork = snapshot.activeWork.slice(0, MAX_ACTIVITY_RESOURCE_ITEMS);
+        const finishedWork = snapshot.finishedWork.slice(0, MAX_ACTIVITY_RESOURCE_ITEMS);
+        const projection = {
+          ...activitySummary(snapshot),
+          activeWork,
+          finishedWork,
+          bounds: {
+            activeWorkTotal: snapshot.activeWork.length,
+            activeWorkTruncated: activeWork.length < snapshot.activeWork.length,
+            finishedWorkTotal: snapshot.finishedWork.length,
+            finishedWorkTruncated: finishedWork.length < snapshot.finishedWork.length
+          }
+        };
+        const text = JSON.stringify(projection, null, 2);
+        if (text.length > MAX_ACTIVITY_RESOURCE_CHARACTERS) {
+          throw {
+            code: "activity_resource_too_large",
+            message: "The bounded activity resource exceeds the 128,000-character limit.",
+            nextAction: "Use project_status_get_activity and project_status_list_active_work with pagination instead."
+          };
+        }
+        return { contents: [{ uri: uri.href, mimeType: "application/json", text }] };
+      } catch (error2) {
+        const detail = actionableError(error2);
+        throw new Error(`${detail.code}: ${detail.message} ${detail.nextAction}`);
+      }
+    }
+  );
+}
 function createProjectStatusServer(options = {}) {
   const server = new McpServer(
     {
       name: "project-status-mcp-server",
-      version: "1.0.0",
-      description: "Read-only access to a validated Project Status manifest."
+      version: "1.2.0",
+      description: "Read-only access to validated Project Status readiness and optional local activity."
     },
     {
-      instructions: "All tools are local, read-only, idempotent manifest views. Validate first when another tool reports a manifest contract error. Monitoring probes are intentionally unavailable through MCP."
+      instructions: "All tools are local, read-only, idempotent views. Readiness comes only from the validated manifest; activity is an independent optional snapshot and never changes readiness. Validate first when a manifest tool reports a contract error. Monitoring probes and activity writes are intentionally unavailable through MCP."
     }
   );
   const resolveService = createServiceResolver(server, options);
+  const activity = createActivityService(
+    options.activitySource ?? createConfiguredActivitySource({ explicitPath: options.activityPath })
+  );
   registerSummary(server, resolveService);
   registerValidation(server, resolveService);
   registerTaskList(server, resolveService);
   registerDependencies(server, resolveService);
+  registerActivitySummary(server, activity);
+  registerActiveWork(server, activity);
+  registerActivityUsage(server, activity);
+  registerActivityLocks(server, activity);
   registerManifestResource(server, resolveService);
+  registerActivityResource(server, activity);
   return server;
 }
 

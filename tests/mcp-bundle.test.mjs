@@ -11,6 +11,7 @@ const projectRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const sourceBundle = join(projectRoot, "packages", "mcp", "dist", "index.js");
 const sourceCore = join(projectRoot, "packages", "core");
 const sourceManifest = join(projectRoot, ".project-status", "manifest.json");
+const releaseVersion = (await readFile(join(projectRoot, "VERSION"), "utf8")).trim();
 const mcpRequire = createRequire(new URL("../packages/mcp/package.json", import.meta.url));
 const { Client } = await import(pathToFileURL(mcpRequire.resolve("@modelcontextprotocol/client")).href);
 const { StdioClientTransport } = await import(pathToFileURL(mcpRequire.resolve("@modelcontextprotocol/client/stdio")).href);
@@ -36,7 +37,7 @@ test("bundled MCP starts from an isolated plugin tree without node_modules", asy
   assert.equal(existsSync(join(pluginRoot, "node_modules")), false);
 
   const client = new Client(
-    { name: "project-status-bundle-smoke", version: "1.0.0" },
+    { name: "project-status-bundle-smoke", version: releaseVersion },
     { versionNegotiation: { mode: { pin: "2026-07-28" } } },
   );
   const environment = { ...process.env };
@@ -54,11 +55,15 @@ test("bundled MCP starts from an isolated plugin tree without node_modules", asy
   t.after(() => client.close());
 
   assert.equal(client.getProtocolEra(), "modern");
-  assert.equal(client.getServerVersion().version, "1.0.0");
+  assert.equal(client.getServerVersion().version, releaseVersion);
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map((tool) => tool.name).sort(), [
+    "project_status_get_activity",
     "project_status_get_dependencies",
+    "project_status_get_locks",
     "project_status_get_summary",
+    "project_status_get_usage",
+    "project_status_list_active_work",
     "project_status_list_tasks",
     "project_status_validate_manifest",
   ]);

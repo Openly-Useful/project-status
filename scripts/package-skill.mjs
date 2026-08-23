@@ -32,6 +32,14 @@ const ARCHIVE_NAMES = {
   claude: "project-status-claude-plugin.zip",
 };
 const CHECKSUM_NAME = "checksums.json";
+const LEGAL_FILES = [
+  "LICENSE",
+  "PRIVACY.md",
+  "TERMS.md",
+  "SECURITY.md",
+  "SUPPORT.md",
+  "THIRD_PARTY_NOTICES.md",
+];
 const DEFAULT_OUTPUT_ROOT = join(releaseRoot, "artifacts", "skills");
 const HOME_PREFIXES = [`/${"Users"}/`, `/${"home"}/`, `${"C:"}\\${"Users"}\\`];
 const SECRET_PATTERNS = [
@@ -107,6 +115,20 @@ function addInventory(entries) {
   };
 }
 
+function legalEntries(prefix = "") {
+  const entries = [];
+  for (const name of LEGAL_FILES) {
+    const path = join(releaseRoot, name);
+    if (!existsSync(path)) throw new Error(`${name} is required in every distribution archive`);
+    const archivePath = prefix ? `${prefix}/${name}` : name;
+    const contents = readFileSync(path);
+    const errors = scanPackagedContents(archivePath, contents);
+    if (errors.length > 0) throw new Error(errors.join("\n"));
+    entries.push({ path: archivePath, contents, mode: 0o100644 });
+  }
+  return entries;
+}
+
 function portableEntries() {
   const runtime = collectRuntimeFiles(canonicalSkillRoot).map((file) => ({
     ...file,
@@ -116,12 +138,12 @@ function portableEntries() {
     const errors = scanPackagedContents(entry.path, entry.contents);
     if (errors.length > 0) throw new Error(errors.join("\n"));
   }
-  return { runtimeFileCount: runtime.length, ...addInventory(runtime) };
+  return { runtimeFileCount: runtime.length, ...addInventory([...runtime, ...legalEntries("project-status")]) };
 }
 
 function pluginEntries(kind) {
   const pluginRoot = kind === "openai" ? openAiPluginRoot : claudePluginRoot;
-  const entries = collectPluginFiles(pluginRoot);
+  const entries = [...collectPluginFiles(pluginRoot), ...legalEntries()];
   const requiredManifest = kind === "openai" ? ".codex-plugin/plugin.json" : ".claude-plugin/plugin.json";
   if (!entries.some((entry) => entry.path === requiredManifest)) throw new Error(`${kind} plugin is missing ${requiredManifest}`);
   if (!entries.some((entry) => entry.path === "skills/project-status/SKILL.md")) throw new Error(`${kind} plugin is missing a physical skills/project-status/SKILL.md`);

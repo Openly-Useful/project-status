@@ -11,6 +11,7 @@ import {
   Command,
   Copy,
   Cube,
+  CaretDown,
   Database,
   FileMagnifyingGlass,
   GitCommit,
@@ -33,6 +34,8 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { mergeStatus } from "./status-adapter.js";
+import { groupProgressPhases, workflowState } from "./progress-model.js";
+import { countLabel, formatDuration, metricLabel } from "./activity-model.js";
 
 const bundledStatus = mergeStatus(__PROJECT_STATUS_FALLBACK__, null);
 
@@ -46,6 +49,7 @@ const sectionDefinitions = [
 ];
 
 const commandSections = [
+  { id: "progress", label: "RunGlance HUD", icon: ChartBar },
   ...sectionDefinitions,
   { id: "install", label: "Attach skill", icon: Package },
 ];
@@ -58,24 +62,64 @@ function useStatusData() {
 
   useEffect(() => {
     const controller = new AbortController();
+    let manifestSnapshot = __PROJECT_STATUS_FALLBACK__;
+    let monitorSnapshot = null;
+    let activityTimer = null;
+
+    const fetchJson = (url) => fetch(url, { signal: controller.signal }).then((response) => {
+      if (!response.ok) {
+        const error = new Error(`${url} ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+      return response.json();
+    });
+
+    const activityPollDelay = (activity) => {
+      const state = activity?.thread?.state;
+      if (["running", "waiting", "locked"].includes(state) || (activity?.activeWork?.length ?? 0) > 0) return 1000;
+      return activity ? 5000 : 15000;
+    };
+
+    const scheduleActivityPoll = (delay) => {
+      window.clearTimeout(activityTimer);
+      activityTimer = window.setTimeout(async () => {
+        let activity = null;
+        try {
+          activity = await fetchJson("/api/activity");
+          if (!controller.signal.aborted) {
+            setStatus(mergeStatus(manifestSnapshot, monitorSnapshot, undefined, activity));
+          }
+        } catch (error) {
+          if (!controller.signal.aborted && error?.status === 503) {
+            setStatus(mergeStatus(manifestSnapshot, monitorSnapshot, undefined, null));
+          }
+          // Other transient errors keep the last good snapshot; discovery continues with backoff.
+        }
+        if (!controller.signal.aborted) scheduleActivityPoll(activityPollDelay(activity));
+      }, delay);
+    };
+
     Promise.allSettled([
-      fetch("/status/manifest", { signal: controller.signal }).then((response) => {
-        if (!response.ok) throw new Error(`Manifest ${response.status}`);
-        return response.json();
-      }),
-      fetch("/api/status", { signal: controller.signal }).then((response) => {
-        if (!response.ok) throw new Error(`Monitor ${response.status}`);
-        return response.json();
-      }),
-    ]).then(([manifestResult, monitorResult]) => {
+      fetchJson("/status/manifest"),
+      fetchJson("/api/status"),
+      fetchJson("/api/activity"),
+    ]).then(([manifestResult, monitorResult, activityResult]) => {
       if (controller.signal.aborted) return;
       const manifest = manifestResult.status === "fulfilled" ? manifestResult.value : null;
       const monitor = monitorResult.status === "fulfilled" ? monitorResult.value : null;
-      setStatus(mergeStatus(manifest ?? __PROJECT_STATUS_FALLBACK__, monitor));
+      const activity = activityResult.status === "fulfilled" ? activityResult.value : null;
+      manifestSnapshot = manifest ?? manifestSnapshot;
+      monitorSnapshot = monitor;
+      setStatus(mergeStatus(manifestSnapshot, monitorSnapshot, undefined, activity));
       setLoadState(manifest ? "loaded" : "fallback");
+      scheduleActivityPoll(activityPollDelay(activity));
     });
 
-    return () => controller.abort();
+    return () => {
+      window.clearTimeout(activityTimer);
+      controller.abort();
+    };
   }, []);
 
   return { status, loadState };
@@ -208,6 +252,324 @@ function SegmentedWorkBar({ tasks, score }) {
         );
       })}
     </div>
+  );
+}
+
+function ProgressWorkflow({ phase }) {
+  const tasks = phase.tasks ?? [];
+  const complete = tasks.filter((task) => task.status === "complete").length;
+  const state = workflowState(tasks);
+
+  return (
+    <article className="progress-workflow" data-state={state}>
+      <header className="progress-workflow__header">
+        <div className="progress-workflow__title">
+          <i aria-hidden="true" />
+          <h3>{phase.name}</h3>
+        </div>
+        <span>{state === "complete" ? "Completed" : titleCase(state)}</span>
+      </header>
+      <dl className="progress-workflow__meta">
+        <div><dt>Workflow</dt><dd>{state === "complete" ? "Completed" : "Current snapshot"}</dd></div>
+        <div><dt>{tasks.length} tasks</dt><dd>{phase.weight} weighted points</dd></div>
+      </dl>
+      <p className="progress-workflow__summary">{phase.summary ?? phase.description}</p>
+      <h4>Phases</h4>
+      <details className="progress-phase" open>
+        <summary>
+          <span>Tasks</span>
+          <span>{complete}/{tasks.length} <CaretDown size={20} aria-hidden="true" /></span>
+        </summary>
+        <div className="progress-phase__segments" role="list" aria-label={`${complete} of ${tasks.length} tasks complete`}>
+          {tasks.map((task) => <i role="listitem" aria-label={`${task.name}: ${titleCase(task.status)}`} key={task.id} data-state={task.status} />)}
+        </div>
+        <div className="progress-task-table" role="table" aria-label={`${phase.name} tasks`}>
+          <div className="progress-task-table__head" role="row">
+            <span role="columnheader">Task</span><span role="columnheader">Owner</span><span role="columnheader">Points</span>
+          </div>
+          {tasks.map((task) => (
+            <div className="progress-task-table__row" role="row" key={task.id} data-state={task.status}>
+              <span className="progress-task-name" role="cell" title={task.name}><span>{task.name}</span><small>{titleCase(task.status)}</small></span>
+              <span role="cell">{task.owner?.label ?? task.owner?.id ?? "Unassigned"}</span>
+              <span role="cell">{task.earnedWeight}/{task.weight}</span>
+            </div>
+          ))}
+        </div>
+      </details>
+    </article>
+  );
+}
+
+function activityStateLabel(state) {
+  if (state === "completed") return "Completed";
+  if (state === "running") return "Running";
+  if (state === "ready") return "Ready";
+  return titleCase(state);
+}
+
+function ActivityProgress({ progress, label }) {
+  if (progress?.mode !== "determinate" || !Number.isFinite(progress.percent)) {
+    return <span className="activity-progress activity-progress--indeterminate">{progress?.mode === "indeterminate" ? "In progress" : "Progress —"}</span>;
+  }
+  const value = Math.round(progress.percent);
+  return (
+    <div className="activity-progress" role="progressbar" aria-label={label} aria-valuemin="0" aria-valuemax="100" aria-valuenow={value}>
+      <span style={{ width: `${value}%` }} />
+      <small>{value}%</small>
+    </div>
+  );
+}
+
+function ActivityWorkCard({ item }) {
+  return (
+    <article className="activity-work-card" data-state={item.state} data-kind={item.kind}>
+      <header>
+        <span className="activity-work-card__state"><i aria-hidden="true" /> {activityStateLabel(item.state)}</span>
+        <small>{titleCase(item.kind)}</small>
+      </header>
+      <h4>{item.name}</h4>
+      {item.summary ? <p>{item.summary}</p> : null}
+      <ActivityProgress progress={item.progress} label={`${item.name} progress`} />
+      <dl>
+        {item.owner ? <div><dt>Owner</dt><dd>{item.owner}</dd></div> : null}
+        {item.durationSeconds !== null ? <div><dt>Elapsed</dt><dd>{formatDuration(item.durationSeconds)}</dd></div> : null}
+        {item.tokens !== null ? <div><dt>Tokens</dt><dd>{item.tokens.toLocaleString()}</dd></div> : null}
+        {item.toolUses !== null ? <div><dt>Tool uses</dt><dd>{item.toolUses}</dd></div> : null}
+      </dl>
+    </article>
+  );
+}
+
+function AgentSwarm({ agents }) {
+  if (!agents.length) return null;
+  return (
+    <section className="activity-swarm" aria-labelledby="activity-swarm-title">
+      <header><h4 id="activity-swarm-title">Agent swarm</h4><span>{agents.length} accounted for</span></header>
+      <ul>
+        {agents.map((agent) => (
+          <li key={agent.id} data-state={agent.state}>
+            <i aria-hidden="true" />
+            <span><strong>{agent.name}</strong><small>{agent.summary ?? activityStateLabel(agent.state)}</small></span>
+            <span>{agent.progress.mode === "determinate" ? `${Math.round(agent.progress.percent)}%` : activityStateLabel(agent.state)}</span>
+            <time>{agent.durationSeconds === null ? "—" : formatDuration(agent.durationSeconds)}</time>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function LiveActivitySummary({ activity, onOpen }) {
+  if (!activity.available) {
+    return (
+      <section className="live-summary live-summary--unavailable" aria-labelledby="live-summary-title">
+        <div>
+          <span className="panel-label">RunGlance HUD</span>
+          <h2 id="live-summary-title">RunGlance unavailable</h2>
+          <p>No RunGlance adapter is connected. The readiness manifest below remains available and is not being presented as live work.</p>
+        </div>
+        <button className="secondary-button" type="button" onClick={onOpen}>View RunGlance details <CaretRight size={17} aria-hidden="true" /></button>
+      </section>
+    );
+  }
+
+  const context = metricLabel(activity.usage.contextRemainingPercent);
+  const freshness = activity.freshness.ageSeconds === null ? "—" : `${activity.freshness.ageSeconds}s ago`;
+  return (
+    <section className="live-summary" aria-labelledby="live-summary-title">
+      <div className="live-summary__lead">
+        <span className="panel-label">RunGlance HUD</span>
+        <h2 id="live-summary-title"><i data-state={activity.thread.state} aria-hidden="true" /> {activityStateLabel(activity.thread.state)}</h2>
+        <ActivityProgress progress={activity.progress} label="Current run progress" />
+      </div>
+      <dl className="live-summary__metrics">
+        <div><dt>Workflows</dt><dd>{countLabel(activity.counts.workflows)}</dd></div>
+        <div><dt>Skills</dt><dd>{countLabel(activity.counts.skills)}</dd></div>
+        <div><dt>Agents</dt><dd>{countLabel(activity.counts.agents)}</dd></div>
+        <div><dt>Context</dt><dd>{context}</dd></div>
+        <div><dt>Lock</dt><dd>{titleCase(activity.lock.state)}</dd></div>
+        <div><dt>Updated</dt><dd>{freshness}</dd></div>
+      </dl>
+      <button className="secondary-button" type="button" onClick={onOpen}>Open RunGlance HUD <CaretRight size={17} aria-hidden="true" /></button>
+    </section>
+  );
+}
+
+function VerificationReceipt({ receipt }) {
+  const [mode, setMode] = useState(receipt?.mode ?? "off");
+
+  useEffect(() => {
+    setMode(receipt?.mode ?? "off");
+  }, [receipt?.id, receipt?.mode]);
+
+  const showReceipt = Boolean(receipt) && mode !== "off";
+  return (
+    <section className="verification-receipt" aria-labelledby="verification-receipt-heading">
+      <header className="verification-receipt__settings">
+        <div><span className="progress-eyebrow">End of run</span><h3 id="verification-receipt-heading">Final status summary</h3></div>
+        <div className="receipt-modes" role="group" aria-label="Final summary preview mode">
+          {["off", "concise", "verified"].map((option) => (
+            <button
+              type="button"
+              key={option}
+              aria-pressed={mode === option}
+              disabled={!receipt && option !== "off"}
+              onClick={() => setMode(option)}
+            >
+              {titleCase(option)}
+            </button>
+          ))}
+        </div>
+      </header>
+
+      {!receipt ? <p className="verification-receipt__empty">No run receipt has been recorded. Final summaries default to off.</p> : null}
+      {receipt && mode === "off" ? <p className="verification-receipt__empty">A receipt is available, but its preview is off.</p> : null}
+      {showReceipt ? (
+        <article className="receipt-card" data-mode={mode}>
+          <header>
+            <CheckCircle size={27} weight="fill" aria-hidden="true" />
+            <div><span>Run receipt</span><h4>{receipt.title}</h4></div>
+          </header>
+          {receipt.summary ? <p className="receipt-card__summary">{receipt.summary}</p> : null}
+          {receipt.fixes.length ? (
+            <section className="receipt-card__section" aria-labelledby="receipt-fixes-title">
+              <h5 id="receipt-fixes-title">Fixed</h5>
+              <ul>{receipt.fixes.map((fix, index) => <li key={`${index}-${fix}`}>{fix}</li>)}</ul>
+            </section>
+          ) : null}
+          <dl className="receipt-card__results">
+            <div><dt>Task result</dt><dd>{receipt.taskResult}</dd></div>
+            <div><dt>Project readiness</dt><dd>{receipt.readiness}</dd></div>
+            {receipt.durationSeconds !== null || receipt.durationLabel ? <div><dt>Elapsed</dt><dd>{receipt.durationLabel ?? formatDuration(receipt.durationSeconds)}</dd></div> : null}
+          </dl>
+          {mode === "verified" && receipt.verifications.length ? (
+            <section className="receipt-card__section" aria-labelledby="receipt-verification-title">
+              <h5 id="receipt-verification-title">Verification</h5>
+              <div className="verification-table" role="table" aria-label="Verification results">
+                <div className="verification-table__head" role="row"><span role="columnheader">Check</span><span role="columnheader">Result</span><span role="columnheader">Details</span></div>
+                {receipt.verifications.map((check) => (
+                  <div className="verification-table__row" role="row" data-state={check.status} key={check.id}>
+                    <span role="cell">{check.name}</span>
+                    <strong role="cell">{check.status.toUpperCase()}</strong>
+                    <span role="cell">{[check.exitCode === null ? null : `exit ${check.exitCode}`, check.durationSeconds === null ? null : formatDuration(check.durationSeconds), check.detail].filter(Boolean).join(" · ") || "—"}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+          {mode === "verified" && receipt.rerunCommands.length ? (
+            <section className="receipt-card__section" aria-labelledby="receipt-rerun-title">
+              <h5 id="receipt-rerun-title">Re-run</h5>
+              <div className="receipt-commands">
+                {receipt.rerunCommands.map((command) => <div className="receipt-command" key={command}><code>$ {command}</code><CopyButton value={command} /></div>)}
+              </div>
+            </section>
+          ) : null}
+          {receipt.remainingWork.length ? (
+            <section className="receipt-card__section receipt-card__remaining" aria-labelledby="receipt-remaining-title">
+              <h5 id="receipt-remaining-title">Remaining</h5>
+              <ul>{receipt.remainingWork.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul>
+            </section>
+          ) : null}
+        </article>
+      ) : null}
+    </section>
+  );
+}
+
+function ProgressDialog({ open, status, onClose }) {
+  const ref = useRef(null);
+  const phases = status.phases ?? [];
+  const { running: openReadiness, finished: finishedReadiness } = groupProgressPhases(phases);
+  const activity = status.liveActivity;
+  const activeAgents = activity.activeWork.filter((item) => item.kind === "agent");
+  const activeNonAgents = activity.activeWork.filter((item) => item.kind !== "agent");
+
+  useEffect(() => {
+    if (open && ref.current && !ref.current.open) ref.current.showModal();
+    if (!open && ref.current?.open) ref.current.close();
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <dialog
+      ref={ref}
+      className="progress-dialog"
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      onClose={onClose}
+      onKeyDown={(event) => keepFocusInsideDialog(event, ref.current)}
+      aria-labelledby="progress-dialog-title"
+    >
+      <section className="progress-sheet">
+        <header className="progress-sheet__header">
+          <span className="progress-sheet__handle" aria-hidden="true" />
+          <button type="button" onClick={onClose} aria-label="Close RunGlance HUD"><X size={30} aria-hidden="true" /></button>
+          <h2 id="progress-dialog-title">RunGlance HUD</h2>
+        </header>
+        <div className="progress-sheet__body">
+          {activity.available ? (
+            <section className="activity-overview" aria-labelledby="activity-overview-title">
+              <header><div><span className="progress-eyebrow">RunGlance</span><h3 id="activity-overview-title">{activityStateLabel(activity.thread.state)}</h3></div><span>Updated {activity.freshness.ageSeconds === null ? "—" : `${activity.freshness.ageSeconds}s ago`}</span></header>
+              <ActivityProgress progress={activity.progress} label="Current run progress" />
+              <dl>
+                <div><dt>Workflows</dt><dd>{countLabel(activity.counts.workflows)}</dd></div>
+                <div><dt>Skills</dt><dd>{countLabel(activity.counts.skills)}</dd></div>
+                <div><dt>Agents</dt><dd>{countLabel(activity.counts.agents)}</dd></div>
+                <div><dt>Context</dt><dd>{metricLabel(activity.usage.contextRemainingPercent)}</dd></div>
+                <div><dt>Quota</dt><dd>{metricLabel(activity.usage.quotaRemainingPercent)}</dd></div>
+                <div><dt>Lock</dt><dd>{titleCase(activity.lock.state)}</dd></div>
+              </dl>
+            </section>
+          ) : (
+            <section className="activity-unavailable" aria-labelledby="activity-unavailable-title">
+              <Heartbeat size={24} aria-hidden="true" />
+              <div><h3 id="activity-unavailable-title">RunGlance unavailable</h3><p>No RunGlance adapter is connected. Manifest phases remain readiness data and are shown separately below.</p></div>
+            </section>
+          )}
+
+          {activity.available ? (
+            <>
+              <details className="progress-group activity-group" open>
+                <summary><h3>Running {activity.activeWork.length}</h3><CaretDown size={18} aria-hidden="true" /></summary>
+                <div className="progress-group__content">
+                  {activeNonAgents.map((item) => <ActivityWorkCard item={item} key={item.id} />)}
+                  <AgentSwarm agents={activeAgents} />
+                  {!activity.activeWork.length ? <p className="progress-group__empty">No active work details were reported.</p> : null}
+                </div>
+              </details>
+              <details className="progress-group activity-group" open>
+                <summary><h3>Finished {activity.finishedWork.length}</h3><CaretDown size={18} aria-hidden="true" /></summary>
+                <div className="progress-group__content">
+                  {activity.finishedWork.length ? activity.finishedWork.map((item) => <ActivityWorkCard item={item} key={item.id} />) : <p className="progress-group__empty">No finished work has been recorded.</p>}
+                </div>
+              </details>
+            </>
+          ) : null}
+
+          <VerificationReceipt receipt={activity.lastReceipt} />
+
+          <details className="readiness-plan">
+            <summary><span><strong>Readiness plan</strong><small>Evidence-backed project progress · {status.score.displayPercent}%</small></span><CaretDown size={20} aria-hidden="true" /></summary>
+            <div className="readiness-plan__content">
+              <p className="readiness-plan__note">This plan is derived from the manifest. It is not a live workflow, agent, or elapsed-time feed.</p>
+              <details className="progress-group" open>
+                <summary><h3>Open readiness work {openReadiness.length}</h3><CaretDown size={18} aria-hidden="true" /></summary>
+                <div className="progress-group__content">
+                  {openReadiness.length ? openReadiness.map((phase) => <ProgressWorkflow phase={phase} key={phase.id} />) : <p className="progress-group__empty">No open readiness phases.</p>}
+                </div>
+              </details>
+              <details className="progress-group">
+                <summary><h3>Finished readiness work {finishedReadiness.length}</h3><CaretDown size={18} aria-hidden="true" /></summary>
+                <div className="progress-group__content">
+                  {finishedReadiness.length ? finishedReadiness.map((phase) => <ProgressWorkflow phase={phase} key={phase.id} />) : <p className="progress-group__empty">No readiness phases are fully complete.</p>}
+                </div>
+              </details>
+            </div>
+          </details>
+        </div>
+      </section>
+    </dialog>
   );
 }
 
@@ -742,6 +1104,8 @@ export function App() {
         </section>
 
         <main id="main-content" className="dashboard">
+          <LiveActivitySummary activity={status.liveActivity} onOpen={() => openSection("progress")} />
+
           <section className="overall-status" aria-labelledby="overall-status-title">
             <div className="overall-status__heading">
               <div>
@@ -757,7 +1121,10 @@ export function App() {
             </div>
 
             <div className="overall-status__bar">
-              <SegmentedWorkBar tasks={tasks} score={status.score.displayPercent} />
+              <button className="progress-tracker-button" type="button" onClick={() => openSection("progress")} aria-label="Open project activity and readiness details">
+                <SegmentedWorkBar tasks={tasks} score={status.score.displayPercent} />
+                <span>Open readiness details <CaretRight size={17} aria-hidden="true" /></span>
+              </button>
               <div className="work-legend" aria-label="Task state legend">
                 <span data-state="complete"><i /> Complete ({counts.complete})</span>
                 <span data-state="in_progress"><i /> Active ({counts.active})</span>
@@ -799,7 +1166,8 @@ export function App() {
         </footer>
       </div>
 
-      <SectionDialog section={activeSection} status={status} onClose={closeSection} onOpenSection={openSection} />
+      <ProgressDialog open={activeSection === "progress"} status={status} onClose={closeSection} />
+      <SectionDialog section={activeSection === "progress" ? null : activeSection} status={status} onClose={closeSection} onOpenSection={openSection} />
       <CommandPalette
         open={paletteOpen}
         onClose={closePalette}

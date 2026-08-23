@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "org.openlyuseful/project-status",
+  "title": "Project Status",
+  "description": "Read-only project readiness, dependency, evidence, and bounded local activity views.",
+  "repository": {
+    "url": "https://github.com/Openly-Useful/project-status",
+    "source": "github"
+  },
+  "version": "1.2.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@openly-useful/project-status-mcp",
+      "version": "1.2.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

@@ -10,6 +10,11 @@ import {
 import * as z from "zod/v4";
 
 import {
+  createConfiguredActivitySource,
+  createActivityService,
+  type ActivityService,
+} from "./activity-adapter.js";
+import {
   actionableError,
   boundedValidationErrors,
   createFileManifestSource,
@@ -18,7 +23,13 @@ import {
   resolveManifestPath,
   type ManifestService,
 } from "./manifest-adapter.js";
-import type { ManifestSource, ManifestTask, ProjectStatusManifest } from "./types.js";
+import type {
+  ActivitySnapshot,
+  ActivitySource,
+  ManifestSource,
+  ManifestTask,
+  ProjectStatusManifest,
+} from "./types.js";
 
 const READ_ONLY_ANNOTATIONS = Object.freeze({
   readOnlyHint: true,
@@ -28,6 +39,8 @@ const READ_ONLY_ANNOTATIONS = Object.freeze({
 });
 const TASK_STATUSES = ["complete", "in_progress", "blocked", "not_started"] as const;
 const MAX_RESOURCE_CHARACTERS = 512_000;
+const MAX_ACTIVITY_RESOURCE_CHARACTERS = 128_000;
+const MAX_ACTIVITY_RESOURCE_ITEMS = 50;
 const ROOTS_RESPONSE_KEY = "project_status_workspace_roots";
 
 const EmptyInput = z.object({}).strict();
@@ -258,6 +271,139 @@ const DependenciesOutput = z.object({
   dependencies: z.array(PublicDependency),
 });
 
+const ActivityProgressOutput = z.object({
+  mode: z.enum(["determinate", "indeterminate", "unavailable"]),
+  completed: z.number().nonnegative().nullable(),
+  total: z.number().nonnegative().nullable(),
+  percent: z.number().min(0).max(100).nullable(),
+}).strict();
+
+const ActivityMetricOutput = z.object({
+  value: z.number().min(0).max(100).nullable(),
+  truthClass: z.enum(["exact", "derived", "estimated", "unknown"]),
+  source: z.string(),
+  observedAt: z.string().nullable(),
+  unit: z.string().nullable(),
+}).strict();
+
+const ActivityUsageOutput = z.object({
+  contextRemainingPercent: ActivityMetricOutput,
+  quotaRemainingPercent: ActivityMetricOutput,
+  taskBudgetRemainingPercent: ActivityMetricOutput,
+}).strict();
+
+const ActivityLockOutput = z.object({
+  id: z.string(),
+  state: z.enum(["unlocked", "locked", "stale", "unknown"]),
+  owner: z.string().nullable(),
+  observedAt: z.string().nullable(),
+}).strict();
+
+const ActivityVerificationOutput = z.object({
+  id: z.string(),
+  name: z.string(),
+  status: z.enum(["PASS", "FAIL", "STOPPED", "UNKNOWN"]),
+  exitCode: z.number().int().nullable(),
+  durationMs: z.number().nonnegative().nullable(),
+}).strict();
+
+const ActivityReceiptOutput = z.object({
+  schemaVersion: z.number().int().positive(),
+  sessionId: z.string().nullable(),
+  completedAt: z.string(),
+  status: z.enum(["complete", "partial", "failed", "stopped", "unknown"]),
+  taskResult: z.enum(["complete", "partial", "failed", "stopped", "unknown"]),
+  projectReadiness: z.object({
+    status: z.literal("not_assessed"),
+    value: z.null(),
+    source: z.null(),
+  }).strict(),
+  summary: z.string().nullable(),
+  fixes: z.array(z.string()),
+  verifications: z.array(ActivityVerificationOutput),
+  remaining: z.array(z.string()),
+  duration: z.string(),
+  counts: z.object({
+    workflows: z.number().int().nonnegative(),
+    skills: z.number().int().nonnegative(),
+    agents: z.number().int().nonnegative(),
+  }).strict(),
+}).strict();
+
+const ActivitySummaryOutput = z.object({
+  ok: z.literal(true),
+  schemaVersion: z.number().int().positive(),
+  sessionId: z.string().nullable(),
+  generatedAt: z.string(),
+  thread: z.object({
+    state: z.enum(["ready", "running", "waiting", "locked", "stale", "unknown", "failed", "stopped"]),
+    startedAt: z.string().nullable(),
+  }).strict(),
+  progress: ActivityProgressOutput,
+  counts: z.object({
+    workflows: z.number().int().nonnegative().nullable(),
+    skills: z.number().int().nonnegative().nullable(),
+    agents: z.number().int().nonnegative().nullable(),
+    tools: z.number().int().nonnegative().nullable(),
+  }).strict(),
+  usage: ActivityUsageOutput,
+  lock: ActivityLockOutput,
+  freshness: z.object({
+    heartbeatAt: z.string().nullable(),
+    ageSeconds: z.number().nonnegative().nullable(),
+  }).strict(),
+  capabilities: z.record(z.string(), z.boolean()),
+  lastReceipt: ActivityReceiptOutput.nullable(),
+}).strict();
+
+const ActivityWorkOutput = z.object({
+  id: z.string(),
+  kind: z.enum(["thread", "workflow", "skill", "agent", "tool"]),
+  label: z.string(),
+  state: z.enum(["queued", "running", "waiting", "completed", "failed", "stopped"]),
+  parentId: z.string().nullable(),
+  progress: ActivityProgressOutput,
+  startedAt: z.string().nullable(),
+  updatedAt: z.string().nullable(),
+  completedAt: z.string().nullable(),
+  elapsedSeconds: z.number().nonnegative().nullable(),
+}).strict();
+
+const ListActiveWorkInput = z.object({
+  scope: z.enum(["active", "finished", "all"]).default("active")
+    .describe("Select currently active work, terminal finished work, or both."),
+  kind: z.enum(["thread", "workflow", "skill", "agent", "tool"]).optional()
+    .describe("Optional exact activity entity kind filter."),
+  state: z.enum(["queued", "running", "waiting", "completed", "failed", "stopped"]).optional()
+    .describe("Optional exact lifecycle state filter."),
+  limit: z.number().int().min(1).max(100).default(25).describe("Maximum work items to return (1-100)."),
+  offset: z.number().int().min(0).default(0).describe("Number of matching work items to skip."),
+}).strict();
+
+const ListActiveWorkOutput = z.object({
+  ok: z.literal(true),
+  scope: z.enum(["active", "finished", "all"]),
+  total: z.number().int().nonnegative(),
+  count: z.number().int().nonnegative(),
+  offset: z.number().int().nonnegative(),
+  hasMore: z.boolean(),
+  nextOffset: z.number().int().nonnegative().nullable(),
+  work: z.array(ActivityWorkOutput),
+}).strict();
+
+const ActivityUsageToolOutput = z.object({
+  ok: z.literal(true),
+  generatedAt: z.string(),
+  usage: ActivityUsageOutput,
+}).strict();
+
+const ActivityLocksToolOutput = z.object({
+  ok: z.literal(true),
+  generatedAt: z.string(),
+  count: z.number().int().nonnegative(),
+  locks: z.array(ActivityLockOutput),
+}).strict();
+
 function taskRecords(manifest: ProjectStatusManifest): Array<ManifestTask & { phaseId: string; phaseName: string }> {
   return manifest.phases.flatMap((phase) => phase.tasks.map((task) => ({ ...task, phaseId: phase.id, phaseName: phase.name })));
 }
@@ -284,6 +430,141 @@ function publicTask(task: ManifestTask & { phaseId: string; phaseName: string })
     },
     gateCount: task.gateRefs.length,
   };
+}
+
+function activitySummary(snapshot: ActivitySnapshot): Record<string, unknown> {
+  return {
+    ok: true,
+    schemaVersion: snapshot.schemaVersion,
+    sessionId: snapshot.sessionId,
+    generatedAt: snapshot.generatedAt,
+    thread: snapshot.thread,
+    progress: snapshot.progress,
+    counts: snapshot.counts,
+    usage: snapshot.usage,
+    lock: snapshot.lock,
+    freshness: snapshot.freshness,
+    capabilities: snapshot.capabilities,
+    lastReceipt: snapshot.lastReceipt,
+  };
+}
+
+function registerActivitySummary(server: McpServer, activity: ActivityService): void {
+  server.registerTool(
+    "project_status_get_activity",
+    {
+      title: "Get Project Status Activity",
+      description: "Read the optional local activity snapshot and return its thread state, progress, live counts, usage truth classes, lock, freshness, capabilities, and bounded last verification receipt. No readiness value is calculated or changed.",
+      inputSchema: EmptyInput,
+      outputSchema: ActivitySummaryOutput,
+      annotations: { title: "Get Project Status Activity", ...READ_ONLY_ANNOTATIONS },
+    },
+    async () => {
+      try {
+        const snapshot = await activity.load();
+        const output = activitySummary(snapshot);
+        const counts = snapshot.counts;
+        const label = (value: number | null): string => value === null ? "—" : String(value);
+        return success(
+          output,
+          `Activity: ${snapshot.thread.state}. Workflows ${label(counts.workflows)}, skills ${label(counts.skills)}, agents ${label(counts.agents)}, tools ${label(counts.tools)}. Snapshot ${snapshot.generatedAt}.`,
+        );
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
+}
+
+function registerActiveWork(server: McpServer, activity: ActivityService): void {
+  server.registerTool(
+    "project_status_list_active_work",
+    {
+      title: "List Project Status Activity Work",
+      description: "List bounded, redacted workflow, skill, agent, thread, and tool activity. Defaults to active work; scope can include finished work. Supports exact kind/state filters and offset pagination.",
+      inputSchema: ListActiveWorkInput,
+      outputSchema: ListActiveWorkOutput,
+      annotations: { title: "List Project Status Activity Work", ...READ_ONLY_ANNOTATIONS },
+    },
+    async ({ scope, kind, state, limit, offset }) => {
+      try {
+        const snapshot = await activity.load();
+        const candidates = scope === "active"
+          ? snapshot.activeWork
+          : scope === "finished"
+            ? snapshot.finishedWork
+            : [...snapshot.activeWork, ...snapshot.finishedWork];
+        const matches = candidates.filter((item) => (
+          (kind === undefined || item.kind === kind)
+          && (state === undefined || item.state === state)
+        ));
+        const page = matches.slice(offset, offset + limit);
+        const hasMore = offset + page.length < matches.length;
+        const output = {
+          ok: true,
+          scope,
+          total: matches.length,
+          count: page.length,
+          offset,
+          hasMore,
+          nextOffset: hasMore ? offset + page.length : null,
+          work: page,
+        };
+        return success(output, `Found ${matches.length} matching ${scope} work item(s); returning ${page.length} from offset ${offset}.`);
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
+}
+
+function registerActivityUsage(server: McpServer, activity: ActivityService): void {
+  server.registerTool(
+    "project_status_get_usage",
+    {
+      title: "Get Project Status Usage",
+      description: "Read context, provider-quota, and task-budget remaining percentages from the optional activity snapshot. Each metric preserves exact, derived, estimated, or unknown truth and never substitutes zero for unavailable data.",
+      inputSchema: EmptyInput,
+      outputSchema: ActivityUsageToolOutput,
+      annotations: { title: "Get Project Status Usage", ...READ_ONLY_ANNOTATIONS },
+    },
+    async () => {
+      try {
+        const snapshot = await activity.load();
+        const output = { ok: true, generatedAt: snapshot.generatedAt, usage: snapshot.usage };
+        return success(output, `Usage snapshot from ${snapshot.generatedAt}; unavailable metrics remain explicitly unknown.`);
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
+}
+
+function registerActivityLocks(server: McpServer, activity: ActivityService): void {
+  server.registerTool(
+    "project_status_get_locks",
+    {
+      title: "Get Project Status Locks",
+      description: "Read the bounded, redacted local thread-lock observation. A stale or unknown observation is not reported as unlocked.",
+      inputSchema: EmptyInput,
+      outputSchema: ActivityLocksToolOutput,
+      annotations: { title: "Get Project Status Locks", ...READ_ONLY_ANNOTATIONS },
+    },
+    async () => {
+      try {
+        const snapshot = await activity.load();
+        const output = {
+          ok: true,
+          generatedAt: snapshot.generatedAt,
+          count: snapshot.locks.length,
+          locks: snapshot.locks,
+        };
+        return success(output, `Lock state: ${snapshot.lock.state}. Observation: ${snapshot.lock.observedAt ?? "unknown"}.`);
+      } catch (error) {
+        return failure(error);
+      }
+    },
+  );
 }
 
 function registerSummary(server: McpServer, resolveService: ServiceResolver): void {
@@ -494,28 +775,81 @@ function registerManifestResource(server: McpServer, resolveService: ServiceReso
   );
 }
 
+function registerActivityResource(server: McpServer, activity: ActivityService): void {
+  server.registerResource(
+    "project-status-activity",
+    "project-status://activity",
+    {
+      title: "Project Status activity snapshot",
+      description: "Bounded public projection of optional local activity, including separate active and finished work lists. Prompt, transcript, command, environment, credential, and raw path fields are omitted or redacted.",
+      mimeType: "application/json",
+      cacheHint: { ttlMs: 1_000, cacheScope: "private" },
+    },
+    async (uri) => {
+      try {
+        const snapshot = await activity.load();
+        const activeWork = snapshot.activeWork.slice(0, MAX_ACTIVITY_RESOURCE_ITEMS);
+        const finishedWork = snapshot.finishedWork.slice(0, MAX_ACTIVITY_RESOURCE_ITEMS);
+        const projection = {
+          ...activitySummary(snapshot),
+          activeWork,
+          finishedWork,
+          bounds: {
+            activeWorkTotal: snapshot.activeWork.length,
+            activeWorkTruncated: activeWork.length < snapshot.activeWork.length,
+            finishedWorkTotal: snapshot.finishedWork.length,
+            finishedWorkTruncated: finishedWork.length < snapshot.finishedWork.length,
+          },
+        };
+        const text = JSON.stringify(projection, null, 2);
+        if (text.length > MAX_ACTIVITY_RESOURCE_CHARACTERS) {
+          throw {
+            code: "activity_resource_too_large",
+            message: "The bounded activity resource exceeds the 128,000-character limit.",
+            nextAction: "Use project_status_get_activity and project_status_list_active_work with pagination instead.",
+          };
+        }
+        return { contents: [{ uri: uri.href, mimeType: "application/json", text }] };
+      } catch (error) {
+        const detail = actionableError(error);
+        throw new Error(`${detail.code}: ${detail.message} ${detail.nextAction}`);
+      }
+    },
+  );
+}
+
 export interface ProjectStatusServerOptions {
   source?: ManifestSource;
   manifestPath?: string;
+  activitySource?: ActivitySource;
+  activityPath?: string;
 }
 
 export function createProjectStatusServer(options: ProjectStatusServerOptions = {}): McpServer {
   const server = new McpServer(
     {
       name: "project-status-mcp-server",
-      version: "1.0.0",
-      description: "Read-only access to a validated Project Status manifest.",
+      version: "1.2.0",
+      description: "Read-only access to validated Project Status readiness and optional local activity.",
     },
     {
-      instructions: "All tools are local, read-only, idempotent manifest views. Validate first when another tool reports a manifest contract error. Monitoring probes are intentionally unavailable through MCP.",
+      instructions: "All tools are local, read-only, idempotent views. Readiness comes only from the validated manifest; activity is an independent optional snapshot and never changes readiness. Validate first when a manifest tool reports a contract error. Monitoring probes and activity writes are intentionally unavailable through MCP.",
     },
   );
   const resolveService = createServiceResolver(server, options);
+  const activity = createActivityService(
+    options.activitySource ?? createConfiguredActivitySource({ explicitPath: options.activityPath }),
+  );
   registerSummary(server, resolveService);
   registerValidation(server, resolveService);
   registerTaskList(server, resolveService);
   registerDependencies(server, resolveService);
+  registerActivitySummary(server, activity);
+  registerActiveWork(server, activity);
+  registerActivityUsage(server, activity);
+  registerActivityLocks(server, activity);
   registerManifestResource(server, resolveService);
+  registerActivityResource(server, activity);
   return server;
 }
 

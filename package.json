@@ -1,6 +1,6 @@
 {
   "name": "project-status-initiative",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,6 +11,11 @@
     "test:unit": "PROJECT_STATUS_SKIP_BUILD_ARTIFACT_TEST=1 node --test tests/*.test.mjs",
     "test:build": "npm run build && node --test tests/sites-worker.test.mjs",
     "test:sites": "node --test tests/sites-worker.test.mjs",
+    "notices:plan": "node scripts/third-party-notices.mjs plan",
+    "notices:verify": "node scripts/third-party-notices.mjs verify",
+    "runglance:plan": "node scripts/package-runglance.mjs plan",
+    "runglance:build": "node scripts/package-runglance.mjs build",
+    "runglance:verify": "node scripts/package-runglance.mjs verify",
     "status:validate": "node skill/project-status/scripts/status.mjs validate .project-status/manifest.json",
     "status:summary": "node skill/project-status/scripts/status.mjs summary .project-status/manifest.json"
   },

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
+  createPublicActivityProjection,
   createPublicMonitorProjection,
   handleStatusRequest,
 } from "../worker/status-api.js";
@@ -42,6 +43,34 @@ const monitorRecord = {
     lastFailureAt: "2026-08-12T18:00:01.000Z",
     recoveredAt: null,
   }],
+};
+
+const activityRecord = {
+  schemaVersion: 1,
+  generatedAt: "2026-08-12T18:00:05.000Z",
+  thread: { state: "running", startedAt: "2026-08-12T18:00:00.000Z" },
+  progress: { mode: "determinate", completed: 2, total: 4, percent: 1 },
+  counts: { workflows: 1, skills: 1, agents: 2 },
+  usage: {
+    contextRemainingPercent: { value: 72, truthClass: "exact", source: "codex", observedAt: "2026-08-12T18:00:05.000Z", unit: "%" },
+    quotaRemainingPercent: { value: null, truthClass: "unknown", source: "unknown", observedAt: null, unit: "%" },
+    taskBudgetRemainingPercent: { value: 50, truthClass: "derived", source: "task-budget", observedAt: "2026-08-12T18:00:05.000Z", unit: "%" },
+  },
+  lock: { state: "locked", owner: null, heartbeatAt: "2026-08-12T18:00:04.000Z" },
+  freshness: { heartbeatAt: "2026-08-12T18:00:04.000Z", ageSeconds: 900 },
+  capabilities: { "adapter.codex": true, "bad key": true },
+  work: [
+    { id: "agent-1", kind: "agent", label: "Implement /Users/alice/private with sk-testsecret123", state: "running", elapsedSeconds: 4 },
+    { id: "agent-2", kind: "agent", label: "Run tests", state: "completed", elapsedSeconds: 3 },
+  ],
+  lastReceipt: {
+    status: "partial",
+    title: "Task result",
+    summary: "Fixed /Users/alice/private",
+    fixes: ["Removed Bearer abcdefghijklmnop"],
+    verification: [{ name: "node --test", state: "passed", exitCode: 0, durationSeconds: 1.2 }],
+    remaining: ["Owner decision"],
+  },
 };
 
 test("manifest endpoint serves the deterministic core public projection with cache validators", async () => {
@@ -143,4 +172,87 @@ test("missing state is a cache-disabled 503 and unrelated routes delegate withou
   });
   assert.equal(unrelated, null);
   assert.equal(reads, 1);
+});
+
+test("activity endpoint projects fresh Running, Finished, usage, locks, and receipt state without private content", async () => {
+  const response = await handleStatusRequest(new Request("https://status.example.com/api/activity"), {
+    latestActivityState: activityRecord,
+    now: "2026-08-12T18:00:06.000Z",
+  });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("cache-control"), "no-store");
+  const body = await response.text();
+  const projection = JSON.parse(body);
+  assert.equal(projection.progress.percent, 50, "determinate progress is derived from exact counts");
+  assert.equal(projection.freshness.ageSeconds, 2, "freshness is derived from the injected clock");
+  assert.equal(projection.lock.state, "unknown", "a lock without an explicit owner is never affirmative");
+  assert.equal(projection.activeWork.length, 1);
+  assert.equal(projection.finishedWork.length, 1);
+  assert.equal(projection.lastReceipt.taskResult, "partial");
+  assert.equal(projection.lastReceipt.projectReadiness.status, "not_assessed");
+  assert.equal(projection.lastReceipt.verifications[0].status, "PASS");
+  assert.deepEqual(projection.capabilities, { "adapter.codex": true });
+  assert.doesNotMatch(body, /\/Users\/alice/);
+  assert.doesNotMatch(body, /testsecret/);
+  assert.doesNotMatch(body, /abcdefghijklmnop/);
+});
+
+test("activity endpoint accepts the canonical runtime entity and receipt shapes", async () => {
+  const canonical = {
+    ...activityRecord,
+    counts: { workflows: 1, skills: 0, agents: 1, tools: 2 },
+    activeWork: [{
+      id: "workflow-1",
+      kind: "workflow",
+      name: "Build package",
+      parentId: "primary",
+      state: "running",
+      progress: { completed: 3, total: 4 },
+      startedAt: "2026-08-12T18:00:00.000Z",
+      updatedAt: "2026-08-12T18:00:05.000Z",
+      completedAt: null,
+    }],
+    finishedWork: [],
+    lock: { state: "unlocked", owner: null, observedAt: "2026-08-12T18:00:05.000Z" },
+    lastReceipt: {
+      status: "complete",
+      taskResult: "complete",
+      projectReadiness: { status: "not_assessed", value: null, source: null },
+      summary: "Boundary fixed",
+      fixes: ["Applied fix"],
+      verifications: [{ name: "Unit tests", status: "PASS", exitCode: 0, durationMs: 25, rerun: "private command" }],
+      remaining: [],
+      duration: "00:05",
+      completedAt: "2026-08-12T18:00:05.000Z",
+    },
+  };
+  const projection = createPublicActivityProjection(canonical, { now: "2026-08-12T18:00:06.000Z" });
+  assert.equal(projection.activeWork[0].label, "Build package");
+  assert.equal(projection.activeWork[0].progress.percent, 75);
+  assert.equal(projection.counts.tools, 2);
+  assert.equal(projection.lock.observedAt, "2026-08-12T18:00:05.000Z");
+  assert.equal(projection.lastReceipt.verifications[0].durationMs, 25);
+  assert.equal(JSON.stringify(projection).includes("private command"), false);
+});
+
+test("activity projection keeps estimates explicit and missing state is an actionable no-store 503", async () => {
+  const projected = createPublicActivityProjection({
+    ...activityRecord,
+    usage: {
+      ...activityRecord.usage,
+      quotaRemainingPercent: {
+        value: 31,
+        truthClass: "estimated",
+        source: "operator-opt-in",
+        observedAt: "2026-08-12T18:00:05.000Z",
+      },
+    },
+  }, { now: "2026-08-12T18:00:06.000Z" });
+  assert.equal(projected.usage.quotaRemainingPercent.truthClass, "estimated");
+  assert.equal(projected.usage.contextRemainingPercent.truthClass, "exact");
+
+  const missing = await handleStatusRequest(new Request("https://status.example.com/api/activity"), {});
+  assert.equal(missing.status, 503);
+  assert.equal(missing.headers.get("cache-control"), "no-store");
+  assert.deepEqual(await missing.json(), { schemaVersion: 1, error: "activity_state_unavailable" });
 });

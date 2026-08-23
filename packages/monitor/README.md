@@ -14,7 +14,7 @@ Targets use `{ id, name, url, method?, expectedStatus? }`. The default policy al
 only HTTP(S), resolves hostnames before fetch, pins the connection to an approved
 DNS address, denies local/private/link-local/
 multicast/reserved addresses, rejects credentials and redirects, aborts after five
-seconds, and reads at most 64 KiB. Controlled adapters and tests may explicitly inject
+seconds including DNS preflight, and reads at most 64 KiB. Controlled adapters and tests may explicitly inject
 DNS, fetch, timers, clock, policy overrides, and a store.
 
 The durable `JsonlRunStore` opens history in append mode, writes one JSON object per

@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "id": "openly-useful",
+  "displayName": "Openly Useful",
+  "authorityManifest": "https://openlyuseful.org/publisher/manifest.json",
+  "mirrorRole": "repository-consumer",
+  "legal": {
+    "plannedName": "Openly Useful LLC",
+    "activeName": null,
+    "status": "formation-pending",
+    "plannedRoles": [
+      "publisher",
+      "operator",
+      "licensee"
+    ]
+  },
+  "domains": {
+    "studio": "https://openlyuseful.com",
+    "openSource": "https://openlyuseful.org",
+    "publicAuthority": "openlyuseful.org"
+  },
+  "organization": {
+    "github": "https://github.com/Openly-Useful"
+  },
+  "namespaces": {
+    "npm": "@openly-useful",
+    "openSourceMcp": "org.openlyuseful",
+    "reservedStudioMcp": "com.openlyuseful"
+  },
+  "contacts": {
+    "public": "hello@openlyuseful.org",
+    "routing": "Use the email subject to route publishing, security, legal, and support requests."
+  },
+  "policies": {
+    "privacy": "https://openlyuseful.org/legal/privacy",
+    "terms": "https://openlyuseful.org/legal/terms",
+    "security": "https://openlyuseful.org/security",
+    "support": "https://openlyuseful.org/support"
+  },
+  "publication": {
+    "localGenerationAllowed": true,
+    "localTestingAllowed": true,
+    "externalPublicationAllowed": false,
+    "authorization": "withheld",
+    "blockingRequirements": [
+      "formation-active",
+      "publisher-authorization",
+      "namespace-verification",
+      "public-policy-url-verification"
+    ]
+  },
+  "artifactPolicy": {
+    "authorityEndpoint": "This manifest is the published authority endpoint for Openly Useful publisher and marketplace verification. It is projected from the governed editable publisher source.",
+    "derivation": "Provider-specific skills, MCP manifests, packages, and marketplace listings must derive publisher identity, domains, policy URLs, contacts, and namespaces from this published authority endpoint.",
+    "activation": "The planned legal entity must not be represented as formed, active, or the operator until formation and required publisher verification are complete."
+  },
+  "repositoryContext": {
+    "repositories": {
+      "projectStatus": "https://github.com/Openly-Useful/project-status",
+      "runGlance": "https://github.com/Openly-Useful/project-status"
+    },
+    "runGlanceCopyright": {
+      "authorshipStatus": "sole-author-confirmed",
+      "ownerType": "individual-founder",
+      "ownershipStatus": "personal",
+      "transferRequired": false
+    },
+    "currentOpenSourcePublication": "founder-authorized",
+    "futureEntityPublishing": "documentation-pending-after-formation"
+  },
+  "lastUpdated": "2026-08-16"
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "org.openlyuseful/runglance",
+  "title": "RunGlance",
+  "description": "Read-only local progress, usage, lock state, work lists, and verified run receipts.",
+  "repository": {
+    "url": "https://github.com/Openly-Useful/project-status",
+    "source": "github"
+  },
+  "version": "1.2.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@openly-useful/runglance-mcp",
+      "version": "1.2.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

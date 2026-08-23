@@ -4,10 +4,10 @@ export function toInstant(value, label = "time") {
   return candidate;
 }
 
-export function resolveClock(options = {}, fallback) {
+export function resolveClock(options = {}) {
   if (options.clock !== undefined && typeof options.clock !== "function") {
     throw new TypeError("options.clock must be a function");
   }
   const supplied = options.clock ? options.clock() : options.now;
-  return toInstant(supplied ?? fallback, "clock");
+  return toInstant(supplied ?? Date.now(), "clock");
 }

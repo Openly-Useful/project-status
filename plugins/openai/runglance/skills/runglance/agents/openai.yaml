@@ -1,0 +1,6 @@
+interface:
+  display_name: "RunGlance"
+  short_description: "Live progress and verified run outcomes"
+  default_prompt: "Use $runglance to show a low-overhead RunGlance HUD for this task and finish with an evidence-honest verification receipt."
+policy:
+  allow_implicit_invocation: true

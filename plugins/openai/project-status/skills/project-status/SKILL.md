@@ -1,11 +1,11 @@
 ---
 name: project-status
-description: Inspect, validate, generate, and maintain an evidence-backed project /status dashboard. Use for weighted readiness, blockers, active/deferred effort and unknown estimates, provenance checks, one-shot live monitoring, dashboard plan/apply/check workflows, repository attachment for Codex and Claude, or local plugin packaging and verification.
+description: Inspect, validate, generate, and maintain evidence-backed project readiness. Use for weighted readiness, blockers, active and deferred effort, unknown estimates, provenance checks, one-shot live monitoring, dashboard plan/apply/check workflows, repository attachment for Codex and Claude, or local Project Status plugin packaging and verification. Use the separate RunGlance skill for live agent, workflow, test, usage, lock, HUD, and run-receipt tracking.
 ---
 
 # Project Status
 
-Maintain one conservative source of truth for project readiness. Keep weighted scope, evidence validity, live service health, external wait, and delivery activity separate.
+Maintain one conservative source of truth for project readiness. Keep weighted scope, evidence validity, live service health, and external wait separate from RunGlance activity.
 
 ## Preserve the safety boundary
 
@@ -104,4 +104,4 @@ The deterministic builder produces a portable skill ZIP, an OpenAI plugin ZIP, a
 
 ## Handoff
 
-Report the exact and rounded readiness; phase denominators; active and deferred effort, unknown estimates, recurring work, and typed gate waits; blockers; changed evidence; provenance limitations; live health and observation time; manifest freshness timestamps; and verified `/status` route. State which operations wrote files and explicitly say when no commit, deploy, installation, schedule, or publication occurred.
+Report the exact and rounded readiness; phase denominators; active and deferred effort, unknown estimates, recurring work, and typed gate waits; blockers; changed evidence; provenance limitations; live health and observation time; manifest freshness timestamps; and verified `/status` route. If RunGlance was used, report its task result separately. State which operations wrote files and explicitly say when no commit, deploy, installation, schedule, or publication occurred.

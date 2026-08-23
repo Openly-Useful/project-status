@@ -58,11 +58,23 @@ function safeOutput(root, value) {
   return { normalized, output };
 }
 
-function expectedFiles(manifest, validation) {
+function expectedFiles(manifest, clockOptions) {
   const files = new Map();
   for (const name of STATIC_FILES) files.set(name, readFileSync(join(TEMPLATE_DIRECTORY, name)));
-  files.set("status.json", Buffer.from(`${stableStringify(createPublicProjection(manifest, validation), 2)}\n`, "utf8"));
+  files.set("status.json", Buffer.from(`${stableStringify(createPublicProjection(manifest, clockOptions), 2)}\n`, "utf8"));
   return files;
+}
+
+function recordedProjectionClock(output) {
+  const path = join(output, "status.json");
+  if (!existsSync(path) || !statSync(path).isFile()) return null;
+  try {
+    const projection = JSON.parse(readFileSync(path, "utf8"));
+    const value = projection.manifestFreshness?.asOf ?? projection.audit?.asOf;
+    return typeof value === "string" && Number.isFinite(Date.parse(value)) ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 function inspectOutput(output, expected) {
@@ -85,11 +97,15 @@ export function planDashboard(options) {
   const target = resolve(options.target);
   if (!existsSync(target) || !statSync(target).isDirectory()) throw new Error(`Project root is not a directory: ${target}`);
   const loaded = readManifest(target);
-  const validation = validateManifest(loaded.manifest, { now: options.now ? new Date(options.now) : undefined });
-  if (validation.errors.length > 0) return { valid: false, operation: options.command, readOnly: options.command !== "apply", manifestPath: loaded.path, errors: validation.errors, warnings: validation.warnings };
   const framework = detectFramework(target);
   const selected = safeOutput(target, options.output ?? framework.recommendedOutput);
-  const expected = expectedFiles(loaded.manifest, validation);
+  const projectionNow = options.now
+    ?? (options.command === "check" ? recordedProjectionClock(selected.output) : null)
+    ?? new Date().toISOString();
+  const clockOptions = { now: projectionNow };
+  const validation = validateManifest(loaded.manifest, clockOptions);
+  if (validation.errors.length > 0) return { valid: false, operation: options.command, readOnly: options.command !== "apply", manifestPath: loaded.path, errors: validation.errors, warnings: validation.warnings };
+  const expected = expectedFiles(loaded.manifest, clockOptions);
   const inspected = inspectOutput(selected.output, expected);
   return {
     valid: true,

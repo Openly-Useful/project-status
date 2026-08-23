@@ -82,6 +82,116 @@ export interface ManifestSource {
   load(): Promise<unknown>;
 }
 
+export type ActivityEntityKind = "thread" | "workflow" | "skill" | "agent" | "tool";
+
+export type ActivityState = "queued" | "running" | "waiting" | "completed" | "failed" | "stopped";
+
+export type ActivityThreadState = "ready" | "running" | "waiting" | "locked" | "stale" | "unknown" | "failed" | "stopped";
+
+export type ActivityTruthClass = "exact" | "derived" | "estimated" | "unknown";
+
+export interface ActivityMetric {
+  value: number | null;
+  truthClass: ActivityTruthClass;
+  source: string;
+  observedAt: string | null;
+  unit: string | null;
+}
+
+export interface ActivityProgress {
+  mode: "determinate" | "indeterminate" | "unavailable";
+  completed: number | null;
+  total: number | null;
+  percent: number | null;
+}
+
+export interface ActivityWorkItem {
+  id: string;
+  kind: ActivityEntityKind;
+  label: string;
+  state: ActivityState;
+  parentId: string | null;
+  progress: ActivityProgress;
+  startedAt: string | null;
+  updatedAt: string | null;
+  completedAt: string | null;
+  elapsedSeconds: number | null;
+}
+
+export interface ActivityLock {
+  id: string;
+  state: "unlocked" | "locked" | "stale" | "unknown";
+  owner: string | null;
+  observedAt: string | null;
+}
+
+export interface ActivityVerification {
+  id: string;
+  name: string;
+  status: "PASS" | "FAIL" | "STOPPED" | "UNKNOWN";
+  exitCode: number | null;
+  durationMs: number | null;
+}
+
+export interface ActivityReceipt {
+  schemaVersion: number;
+  sessionId: string | null;
+  completedAt: string;
+  status: "complete" | "partial" | "failed" | "stopped" | "unknown";
+  taskResult: "complete" | "partial" | "failed" | "stopped" | "unknown";
+  projectReadiness: {
+    status: "not_assessed";
+    value: null;
+    source: null;
+  };
+  summary: string | null;
+  fixes: string[];
+  verifications: ActivityVerification[];
+  remaining: string[];
+  duration: string;
+  counts: {
+    workflows: number;
+    skills: number;
+    agents: number;
+  };
+}
+
+export interface ActivitySnapshot {
+  schemaVersion: number;
+  sessionId: string | null;
+  generatedAt: string;
+  thread: {
+    state: ActivityThreadState;
+    startedAt: string | null;
+  };
+  progress: ActivityProgress;
+  counts: {
+    workflows: number | null;
+    skills: number | null;
+    agents: number | null;
+    tools: number | null;
+  };
+  usage: {
+    contextRemainingPercent: ActivityMetric;
+    quotaRemainingPercent: ActivityMetric;
+    taskBudgetRemainingPercent: ActivityMetric;
+  };
+  lock: ActivityLock;
+  locks: ActivityLock[];
+  freshness: {
+    heartbeatAt: string | null;
+    ageSeconds: number | null;
+  };
+  capabilities: Record<string, boolean>;
+  activeWork: ActivityWorkItem[];
+  finishedWork: ActivityWorkItem[];
+  lastReceipt: ActivityReceipt | null;
+}
+
+export interface ActivitySource {
+  load(): Promise<unknown>;
+}
+
 export interface ActionableError {
   code: string;
   message: string;

@@ -22,7 +22,7 @@ export function calculateStatus(manifest, options = {}) {
   // Validate the timeless contract before consulting an injected clock, then
   // sample that clock exactly once for all time-relative checks and output.
   validateManifest(manifest, { throwOnError: true });
-  const now = resolveClock(options, manifest.audit.evidenceAsOf);
+  const now = resolveClock(options);
   if (options.now !== undefined || options.clock !== undefined) {
     validateManifest(manifest, { now, throwOnError: true });
   }

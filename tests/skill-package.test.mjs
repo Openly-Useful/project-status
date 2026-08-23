@@ -43,6 +43,10 @@ test("all archives have safe allowlisted entry paths and SHA-256 inventories", (
     const archive = readFileSync(join(output, name));
     const stored = readStoredZipEntries(archive);
     const entries = [...stored.keys()];
+    const legalPrefix = name.includes("portable") ? "project-status/" : "";
+    for (const legalFile of ["LICENSE", "PRIVACY.md", "TERMS.md", "SECURITY.md", "SUPPORT.md", "THIRD_PARTY_NOTICES.md"]) {
+      assert.ok(entries.includes(`${legalPrefix}${legalFile}`), `${name} is missing ${legalFile}`);
+    }
     assert.ok(entries.includes("MANIFEST.sha256"));
     assert.ok(entries.some((entry) => entry.endsWith("/SKILL.md")));
     assert.ok(entries.every((entry) => !entry.startsWith("/") && !entry.includes("..") && !entry.includes("\\")));

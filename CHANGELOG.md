@@ -2,6 +2,54 @@
 
 All notable distribution changes are documented here. This project follows semantic versioning for skill and plugin artifacts.
 
+## 1.2.0 - 2026-08-16
+
+### Added
+
+- Canonical repository mirror of the Openly Useful publisher contract, including the planned `Openly Useful LLC` publisher/operator/licensee role, `.org` and `.com` identities, policy endpoints, provider namespaces, and explicit formation status.
+- Unmodified Apache License 2.0 text plus repository privacy, terms, security, support, and contribution documents linked to their canonical Openly Useful `.org` pages.
+- Release validation for both Project Status and RunGlance publisher metadata, exact license bytes, public policy files, generated provider fields, current founder-authorized open-source publication, and external-activation state.
+
+### Changed
+
+- Fail closed at each MCP package's `npm publish` boundary and require explicit release-blocker clearance before external activation.
+- Evaluate Project Status evidence freshness against the real current clock unless a caller supplies an explicit deterministic clock.
+- Advanced the repository, both products, and companion package contract to `1.2.0`; the prior `1.1.0` identifier collides with a different cached Project Status distribution and is not reused.
+- Standardized Openly Useful as the publisher/developer brand while retaining Project Status and RunGlance as product names.
+- Recorded the owner's correction that RunGlance was solely authored by and remains personally owned by the founder. No copyright assignment or ownership transfer is required or planned; the future LLC may publish, operate, and license the product under founder authorization.
+- Required all deterministic distributions to include the license, privacy, terms, security, support, and third-party-notice files.
+
+### Release gates
+
+- Local distribution readiness is independent from external publication readiness.
+- Sole authorship and personal ownership are confirmed facts, not activation gates.
+- Public marketplace and commercial activation remain pending entity formation, documentation of founder authorization for future LLC publication, provider/business verification, public URL reachability, and explicit publication authorization.
+- No marketplace submission, package publication, registry registration, release upload, installation, or external deployment has been performed.
+
+## 1.1.0 - 2026-08-15
+
+### Added
+
+- Standalone `runglance` skill with a dependency-free live-run runtime, strict event contract, permission-restricted local state, atomic snapshots, bounded Running and Finished work, and exact/derived/estimated/unknown truth classes.
+- RunGlance HUD compact, standard, swarm, diagnostic, JSON, Unicode, and ASCII renderers with one-second local refresh that makes no model or MCP calls.
+- Repository-local setup planner plus Codex hooks/App Server, Claude hooks/status-line, and strict generic host adapters that fail closed on unknown input.
+- Shell-free verification execution and configurable off/concise/verified final receipts that separate task result from project readiness.
+- Dedicated read-only `runglance_*` MCP status, work-list, usage, and lock tools plus `runglance://status`; legacy Project Status activity queries remain compatibility aliases.
+- Public `/api/activity` projection and branded RunGlance HUD Running/Finished/swarm views with context, quota, lock, freshness, progress, and final receipt presentation.
+- Deterministic portable-skill, OpenAI-plugin, and Claude-plugin RunGlance archives with generated host manifests and standard optional MCP connection descriptors.
+- Concurrency coverage for simultaneous adapter writers, canonical snapshot/receipt cross-contract tests, privacy boundaries, responsive activity UI, and extracted plugin smoke coverage.
+
+### Changed
+
+- Moved live-run instructions and runtime files out of the Project Status skill so RunGlance is their single canonical skill boundary.
+- Kept the portable local runtime free and open-source-oriented while retaining MCP as an optional companion rather than a requirement.
+
+### Release gates
+
+- Local deterministic packaging is supported for 1.1.0.
+- This historical source state was superseded by 1.2.0 before publication because the version identifier collided with a materially different cached distribution.
+- No marketplace submission, release upload, plugin installation, external deployment, or public publication has been performed.
+
 ## 1.0.0 - 2026-08-12
 
 ### Added

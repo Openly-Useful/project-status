@@ -1,22 +1,39 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
-  "description": "Portable Project Status skills and optional read-only MCP tooling.",
+  "description": "Portable Project Status and RunGlance skills with optional read-only MCP tooling.",
   "name": "project-status-initiative",
   "owner": {
-    "name": "Project Status Initiative"
+    "email": "hello@openlyuseful.org",
+    "name": "Openly Useful",
+    "url": "https://openlyuseful.org"
   },
   "plugins": [
     {
       "author": {
-        "name": "Project Status Initiative"
+        "email": "hello@openlyuseful.org",
+        "name": "Openly Useful",
+        "url": "https://openlyuseful.org"
       },
       "category": "productivity",
-      "description": "Evidence-backed project status workflows for readiness, provenance, monitoring, dashboards, and repository attachment.",
+      "description": "Evidence-backed project readiness, provenance, monitoring, dashboards, and repository attachment.",
       "name": "project-status",
       "source": "./plugins/claude/project-status",
       "strict": true,
-      "version": "1.0.0"
+      "version": "1.2.0"
+    },
+    {
+      "author": {
+        "email": "hello@openlyuseful.org",
+        "name": "Openly Useful",
+        "url": "https://openlyuseful.org"
+      },
+      "category": "productivity",
+      "description": "Portable live progress, RunGlance HUD presets, host adapters, explicit locks, truthful usage metrics, and verified final run receipts.",
+      "name": "runglance",
+      "source": "./plugins/claude/runglance",
+      "strict": true,
+      "version": "1.2.0"
     }
   ],
-  "version": "1.0.0"
+  "version": "1.2.0"
 }

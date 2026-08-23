@@ -232,7 +232,10 @@ test("provenance plans and verifies canonical global evidence without exposing p
     "a11y-dark-mobile-drawer",
   ]);
   for (const evidence of candidate.evidence) {
-    if (fileEvidenceIds.has(evidence.id)) evidence.locator = { type: "file", path: "/fixture/pending" };
+    if (fileEvidenceIds.has(evidence.id)) {
+      evidence.locator = { type: "file", path: "/fixture/pending" };
+      evidence.expiresAt = null;
+    }
   }
   const privatePaths = [];
   for (const [index, evidence] of candidate.evidence.filter((item) => item.locator.type === "file").entries()) {
@@ -302,7 +305,7 @@ test("attachment plan is read-only and copy attachment verifies both hosts", () 
   assert.equal(JSON.parse(verified.stdout).targets.every((target) => target.state === "current"), true);
 });
 
-test("symlink attachment keeps every packaged CLI executable through host discovery paths", () => {
+test("symlink attachment keeps every packaged CLI executable through both host discovery paths", () => {
   const directory = fixture();
   const applied = run("attach.mjs", ["apply", directory, "--mode", "symlink", "--json"]);
   assert.equal(applied.status, 0, applied.stderr);
@@ -316,32 +319,24 @@ test("symlink attachment keeps every packaged CLI executable through host discov
     { cwd: directory, encoding: "utf8" },
   );
 
-  const status = invoke(agentsScripts, "status.mjs", ["summary", directory, "--now", now]);
-  assert.equal(status.status, 0, status.stderr);
-  assert.match(status.stdout, /READINESS 61\/100/);
+  for (const [host, scriptRoot] of [["agents", agentsScripts], ["claude", claudeScripts]]) {
+    const status = invoke(scriptRoot, "status.mjs", ["summary", directory, "--now", now]);
+    assert.equal(status.status, 0, `${host}: ${status.stderr}`);
+    assert.match(status.stdout, /READINESS 61\/100/);
 
-  const dashboard = invoke(claudeScripts, "dashboard.mjs", ["plan", directory, "--json", "--now", now]);
-  assert.equal(dashboard.status, 0, dashboard.stderr);
-  assert.equal(JSON.parse(dashboard.stdout).readOnly, true);
+    for (const [script, args] of [
+      ["dashboard.mjs", ["plan", directory, "--json", "--now", now]],
+      ["provenance.mjs", ["plan", directory, "--json", "--now", now]],
+      ["monitor.mjs", ["once", directory, "--json", "--now", now]],
+      ["package.mjs", ["plan", "--output", join(directory, "artifacts", "skills"), "--json"]],
+    ]) {
+      const result = invoke(scriptRoot, script, args);
+      assert.equal(result.status, 0, `${host}/${script}: ${result.stderr}`);
+      assert.equal(JSON.parse(result.stdout).readOnly, true, `${host}/${script}`);
+    }
 
-  const provenance = invoke(agentsScripts, "provenance.mjs", ["plan", directory, "--json", "--now", now]);
-  assert.equal(provenance.status, 0, provenance.stderr);
-  assert.equal(JSON.parse(provenance.stdout).readOnly, true);
-
-  const monitor = invoke(claudeScripts, "monitor.mjs", ["once", directory, "--json", "--now", now]);
-  assert.equal(monitor.status, 0, monitor.stderr);
-  assert.equal(JSON.parse(monitor.stdout).readOnly, true);
-
-  const packagePlan = invoke(agentsScripts, "package.mjs", [
-    "plan",
-    "--output",
-    join(directory, "artifacts", "skills"),
-    "--json",
-  ]);
-  assert.equal(packagePlan.status, 0, packagePlan.stderr);
-  assert.equal(JSON.parse(packagePlan.stdout).readOnly, true);
-
-  const attached = invoke(claudeScripts, "attach.mjs", ["verify", directory, "--json"]);
-  assert.equal(attached.status, 0, attached.stderr);
-  assert.equal(JSON.parse(attached.stdout).targets.every((target) => target.state === "current"), true);
+    const attached = invoke(scriptRoot, "attach.mjs", ["verify", directory, "--json"]);
+    assert.equal(attached.status, 0, `${host}: ${attached.stderr}`);
+    assert.equal(JSON.parse(attached.stdout).targets.every((target) => target.state === "current"), true);
+  }
 });

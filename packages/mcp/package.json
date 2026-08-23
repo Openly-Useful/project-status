@@ -1,23 +1,37 @@
 {
-  "name": "@project-status/mcp-server",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Optional read-only MCP companion for a Project Status manifest",
+  "name": "@openly-useful/project-status-mcp",
+  "version": "1.2.0",
+  "mcpName": "org.openlyuseful/project-status",
+  "private": false,
+  "description": "Read-only MCP companions for Project Status and standalone RunGlance activity",
+  "license": "Apache-2.0",
   "type": "module",
-  "main": "./dist/index.js",
-  "exports": {
-    ".": "./dist/server.js"
-  },
   "bin": {
-    "project-status-mcp": "./dist/index.js"
+    "project-status-mcp": "./dist/index.js",
+    "runglance-mcp": "./dist/runglance-index.js"
   },
   "files": [
-    "dist",
-    "README.md"
+    "dist/index.js",
+    "dist/runglance-index.js",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/index.js --charset=utf8 --legal-comments=eof",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "build": "node scripts/sync-license.mjs && tsc -p tsconfig.json && esbuild src/index.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/index.js --charset=utf8 --legal-comments=eof && esbuild src/runglance-index.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/runglance-index.js --charset=utf8 --legal-comments=eof",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "prepack": "npm run build && npm test",
+    "prepublishOnly": "node ../../scripts/assert-publish-ready.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Openly-Useful/project-status.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://openlyuseful.org",
+  "bugs": "https://openlyuseful.org/support",
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=20"

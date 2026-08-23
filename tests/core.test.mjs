@@ -33,11 +33,12 @@ function errorCodes(result) {
   return new Set(result.errors.map((error) => error.code));
 }
 
-test("current local-release manifest is strict, evidence-backed, and exactly 61/100", () => {
-  const validation = validateManifest(manifest);
+test("historical local-release manifest is strict, evidence-backed, and exactly 61/100 at its evidence date", () => {
+  const clock = { now: manifest.audit.evidenceAsOf };
+  const validation = validateManifest(manifest, clock);
   assert.deepEqual(validation, { valid: true, errors: [] });
 
-  const status = calculateStatus(manifest);
+  const status = calculateStatus(manifest, clock);
   assert.deepEqual(status.score, {
     earnedWeight: 61,
     totalWeight: 100,
@@ -58,6 +59,11 @@ test("current local-release manifest is strict, evidence-backed, and exactly 61/
   });
   assert.equal(status.audit.verificationState, "current");
   assert.deepEqual(status.gates, { satisfied: 0, unsatisfied: 3, waiting: 0, waived: 0 });
+});
+
+test("default freshness evaluation uses the real clock rather than freezing at evidenceAsOf", () => {
+  const status = calculateStatus(manifest);
+  assert.notEqual(status.audit.verificationState, "current");
 });
 
 test("portable JSON Schema is exactly the canonical core schema", () => {
@@ -245,8 +251,8 @@ test("canonical JSON and SHA-256 are stable across key insertion order", () => {
 test("injected clock controls audit freshness without reading wall time", () => {
   const candidate = clone();
   candidate.audit.state = "current";
-  candidate.evidence.find((item) => item.id === "local-release-verification").expiresAt = null;
-  const now = new Date("2026-08-13T03:58:27.000Z");
+  for (const evidence of candidate.evidence) evidence.expiresAt = null;
+  const now = new Date(Date.parse(candidate.audit.verifiedAt) + candidate.audit.staleAfterSeconds * 1_000 + 1_000);
   const status = calculateStatus(candidate, { clock: () => now });
   assert.equal(status.asOf, now.toISOString());
   assert.equal(status.audit.ageSeconds, Math.floor((now.getTime() - Date.parse(candidate.audit.verifiedAt)) / 1000));
@@ -273,8 +279,8 @@ test("expired evidence marks verification stale without silently erasing histori
   candidate.audit.state = "current";
   candidate.evidence.find((item) => item.id === "local-release-verification").expiresAt = null;
   const evidence = candidate.evidence.find((item) => item.id === "audit-divergence");
-  evidence.expiresAt = "2026-08-13T04:00:00.000Z";
-  const status = calculateStatus(candidate, { now: "2026-08-13T04:01:00.000Z" });
+  evidence.expiresAt = new Date(Date.parse(candidate.audit.evidenceAsOf) + 60_000).toISOString();
+  const status = calculateStatus(candidate, { now: new Date(Date.parse(evidence.expiresAt) + 60_000).toISOString() });
   assert.equal(status.score.earnedWeight, 61);
   assert.equal(status.audit.verificationState, "stale_evidence");
   assert.deepEqual(status.evidence.expiredEvidenceIds, ["audit-divergence"]);

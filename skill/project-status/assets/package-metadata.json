@@ -1,26 +1,36 @@
 {
   "name": "project-status",
-  "version": "1.0.0",
-  "description": "Evidence-backed project readiness, provenance, monitoring, dashboard, and attachment workflows.",
+  "version": "1.2.0",
+  "description": "Evidence-backed project readiness, provenance, monitoring, dashboards, and repository attachment.",
   "author": {
-    "name": "Project Status Initiative"
+    "name": "Openly Useful",
+    "url": "https://openlyuseful.org",
+    "email": "hello@openlyuseful.org"
   },
+  "homepage": "https://github.com/Openly-Useful/project-status",
+  "repository": "https://github.com/Openly-Useful/project-status",
+  "license": "Apache-2.0",
+  "support": "https://openlyuseful.org/support",
+  "privacy": "https://openlyuseful.org/legal/privacy",
+  "terms": "https://openlyuseful.org/legal/terms",
+  "security": "https://openlyuseful.org/security",
+  "publisherManifest": "https://openlyuseful.org/publisher/manifest.json",
   "openai": {
     "interface": {
       "displayName": "Project Status",
-      "shortDescription": "Evidence-backed readiness and live status",
-      "longDescription": "Inspect and maintain a weighted project status manifest, generate a safe /status dashboard, verify provenance, run bounded live checks, and attach the portable skill across agent hosts.",
-      "developerName": "Project Status Initiative",
+      "shortDescription": "Evidence-backed project readiness",
+      "longDescription": "Inspect evidence-backed readiness, validate provenance and freshness, run bounded live-health checks, generate a safe /status dashboard, and attach the portable Project Status skill across agent hosts.",
+      "developerName": "Openly Useful",
       "category": "Productivity",
       "capabilities": ["Read", "Write"],
       "defaultPrompt": [
         "Audit this project's evidence-backed readiness.",
         "Plan a production /status dashboard safely.",
-        "Verify status provenance without editing files."
+        "Validate this project's evidence and readiness freshness."
       ]
     }
   },
   "claude": {
-    "description": "Evidence-backed project status workflows for readiness, provenance, monitoring, dashboards, and repository attachment."
+    "description": "Evidence-backed project readiness, provenance, monitoring, dashboards, and repository attachment."
   }
 }

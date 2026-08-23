@@ -27,6 +27,15 @@ export default {
         }
         return env.LATEST_MONITOR_STATE ?? null;
       },
+      // Activity is opt-in. Public deployments that do not bind a local/private
+      // state source return a cache-disabled 503 instead of fabricating activity.
+      readLatestActivityState: async () => {
+        if (env.ACTIVITY_STATE?.get) {
+          const value = await env.ACTIVITY_STATE.get("latest", { type: "json" });
+          if (value) return value;
+        }
+        return env.LATEST_ACTIVITY_STATE ?? null;
+      },
     });
     if (statusResponse) return statusResponse;
 

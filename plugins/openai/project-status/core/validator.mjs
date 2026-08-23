@@ -567,7 +567,7 @@ function semanticValidation(collector, manifest, options) {
   if (options.now !== undefined || options.clock !== undefined) {
     let now;
     try {
-      now = resolveClock(options, manifest.audit?.evidenceAsOf).getTime();
+      now = resolveClock(options).getTime();
     } catch (error) {
       throw error;
     }

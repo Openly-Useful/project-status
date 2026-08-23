@@ -42,6 +42,8 @@ Never award a higher state from a lower evidence tier when a task requires the h
 - `audit.nextDueAt` is an explicit next audit deadline; otherwise `audit.staleAfterSeconds` applies to the latest audit/evidence baseline.
 - Evidence `capturedAt` and `verifiedAt` describe that evidence record; `expiresAt` makes evidence time-bounded when non-null.
 - A monitor observation time describes only that one live check.
+- When an audit finds no material evidence or status change, leave tracked files, commits, and deployments untouched.
+- Never create or publish a status-only change whose sole material effect is advancing an audit or evidence timestamp.
 
 Call the derived state **manifest freshness**. It does not prove that locators or services were checked at render time. Do not advance any timestamp merely because a dashboard rendered, a CLI validated JSON, a package built, or a browser refreshed.
 

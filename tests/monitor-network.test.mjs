@@ -136,6 +136,22 @@ test("the timeout aborts fetch and reports a stable actionable outcome", async (
   assert.match(result.failure.message, /5ms/);
 });
 
+test("the timeout also bounds DNS preflight and never starts fetch after abort", async () => {
+  let fetchCalls = 0;
+  const result = await probeHttpTarget(target, {
+    fetchImpl: async () => {
+      fetchCalls += 1;
+      return new Response("unexpected");
+    },
+    resolveHostname: async () => new Promise(() => {}),
+    timeoutMs: 5,
+    clock: () => new Date(0),
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.outcome, "timeout");
+  assert.equal(fetchCalls, 0);
+});
+
 test("the private-network override is explicit and injectable", async () => {
   const result = await validateProbeUrl("http://127.0.0.1/health", { allowPrivateNetwork: true });
   assert.equal(result.url.hostname, "127.0.0.1");

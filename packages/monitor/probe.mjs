@@ -168,18 +168,27 @@ export async function probeHttpTarget(rawTarget, dependencies = {}) {
   const started = instant(clock);
   const controller = new AbortController();
   const timer = setTimer(() => controller.abort(new Error("probe timeout")), timeoutMs);
+  const aborted = new Promise((_, reject) => {
+    const rejectAbort = () => reject(controller.signal.reason ?? new Error("probe aborted"));
+    if (controller.signal.aborted) rejectAbort();
+    else controller.signal.addEventListener("abort", rejectAbort, { once: true });
+  });
   let result;
   let currentUrl = target.url;
   let redirectCount = 0;
 
   try {
     while (true) {
-      const validated = await validateProbeUrl(currentUrl, { allowPrivateNetwork, resolveHostname });
+      const validated = await Promise.race([
+        validateProbeUrl(currentUrl, { allowPrivateNetwork, resolveHostname }),
+        aborted,
+      ]);
+      if (controller.signal.aborted) throw controller.signal.reason;
       const response = await fetchImpl(validated.url.href, {
         method: target.method,
         headers: {
           accept: "*/*",
-          "user-agent": "project-status-monitor/1.0.0",
+          "user-agent": "project-status-monitor/1.2.0",
         },
         redirect: "manual",
         signal: controller.signal,

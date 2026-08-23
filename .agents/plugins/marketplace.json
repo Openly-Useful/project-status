@@ -1,6 +1,6 @@
 {
   "interface": {
-    "displayName": "Project Status Initiative"
+    "displayName": "Openly Useful"
   },
   "name": "project-status-initiative",
   "plugins": [
@@ -13,6 +13,18 @@
       },
       "source": {
         "path": "./plugins/openai/project-status",
+        "source": "local"
+      }
+    },
+    {
+      "category": "Productivity",
+      "name": "runglance",
+      "policy": {
+        "authentication": "ON_INSTALL",
+        "installation": "AVAILABLE"
+      },
+      "source": {
+        "path": "./plugins/openai/runglance",
         "source": "local"
       }
     }

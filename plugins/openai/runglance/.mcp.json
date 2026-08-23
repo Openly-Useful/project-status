@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "runglance": {
+      "args": [
+        "./mcp/dist/index.js"
+      ],
+      "command": "node",
+      "cwd": "."
+    }
+  }
+}

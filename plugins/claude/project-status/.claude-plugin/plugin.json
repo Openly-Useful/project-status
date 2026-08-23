@@ -1,10 +1,15 @@
 {
   "author": {
-    "name": "Project Status Initiative"
+    "email": "hello@openlyuseful.org",
+    "name": "Openly Useful",
+    "url": "https://openlyuseful.org"
   },
-  "description": "Evidence-backed project status workflows for readiness, provenance, monitoring, dashboards, and repository attachment.",
+  "description": "Evidence-backed project readiness, provenance, monitoring, dashboards, and repository attachment.",
+  "homepage": "https://github.com/Openly-Useful/project-status",
+  "license": "Apache-2.0",
   "mcpServers": "./.mcp.json",
   "name": "project-status",
+  "repository": "https://github.com/Openly-Useful/project-status",
   "skills": "./skills/",
-  "version": "1.0.0"
+  "version": "1.2.0"
 }

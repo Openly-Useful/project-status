@@ -1,0 +1,36 @@
+{
+  "name": "runglance",
+  "version": "1.2.0",
+  "description": "Live progress for any agent, skill, test, workflow, or automation run, with the optional read-only RunGlance MCP companion.",
+  "author": {
+    "name": "Openly Useful",
+    "url": "https://openlyuseful.org",
+    "email": "hello@openlyuseful.org"
+  },
+  "homepage": "https://github.com/Openly-Useful/project-status",
+  "repository": "https://github.com/Openly-Useful/project-status",
+  "license": "Apache-2.0",
+  "support": "https://openlyuseful.org/support",
+  "privacy": "https://openlyuseful.org/legal/privacy",
+  "terms": "https://openlyuseful.org/legal/terms",
+  "security": "https://openlyuseful.org/security",
+  "publisherManifest": "https://openlyuseful.org/publisher/manifest.json",
+  "openai": {
+    "interface": {
+      "displayName": "RunGlance",
+      "shortDescription": "Live progress and verified run outcomes",
+      "longDescription": "Show a zero-model-call RunGlance HUD, account for workflows, skills and delegated agents, preserve truthful context and quota metrics, report explicit locks, and finish with verification-backed run receipts.",
+      "developerName": "Openly Useful",
+      "category": "Productivity",
+      "capabilities": ["Read", "Write"],
+      "defaultPrompt": [
+        "Show the compact RunGlance HUD for this task.",
+        "Track this agent swarm with RunGlance.",
+        "Finish this run with a verified RunGlance receipt."
+      ]
+    }
+  },
+  "claude": {
+    "description": "Portable live progress, RunGlance HUD presets, host adapters, explicit locks, truthful usage metrics, and verified final run receipts."
+  }
+}

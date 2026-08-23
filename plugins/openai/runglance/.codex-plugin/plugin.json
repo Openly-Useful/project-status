@@ -1,0 +1,35 @@
+{
+  "author": {
+    "email": "hello@openlyuseful.org",
+    "name": "Openly Useful",
+    "url": "https://openlyuseful.org"
+  },
+  "description": "Live progress for any agent, skill, test, workflow, or automation run, with the optional read-only RunGlance MCP companion.",
+  "homepage": "https://github.com/Openly-Useful/project-status",
+  "interface": {
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "category": "Productivity",
+    "defaultPrompt": [
+      "Show the compact RunGlance HUD for this task.",
+      "Track this agent swarm with RunGlance.",
+      "Finish this run with a verified RunGlance receipt."
+    ],
+    "developerName": "Openly Useful",
+    "displayName": "RunGlance",
+    "longDescription": "Show a zero-model-call RunGlance HUD, account for workflows, skills and delegated agents, preserve truthful context and quota metrics, report explicit locks, and finish with verification-backed run receipts.",
+    "privacyPolicyURL": "https://openlyuseful.org/legal/privacy",
+    "shortDescription": "Live progress and verified run outcomes",
+    "supportURL": "https://openlyuseful.org/support",
+    "termsOfServiceURL": "https://openlyuseful.org/legal/terms",
+    "websiteURL": "https://github.com/Openly-Useful/project-status"
+  },
+  "license": "Apache-2.0",
+  "mcpServers": "./.mcp.json",
+  "name": "runglance",
+  "repository": "https://github.com/Openly-Useful/project-status",
+  "skills": "./skills/",
+  "version": "1.2.0"
+}

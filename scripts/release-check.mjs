@@ -1,14 +1,20 @@
 #!/usr/bin/env node
 
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { createPackagePlan as createRunGlancePackagePlan } from "./package-runglance.mjs";
 import { createPackagePlan } from "./package-skill.mjs";
-import { inspectReleaseState, releaseRoot } from "./release-sync.mjs";
+import { inspectReleaseState, publisherErrors, releaseRoot } from "./release-sync.mjs";
+import { createThirdPartyNoticePlan } from "./third-party-notices.mjs";
 
 const ALLOWED_INSTALLATION = new Set(["NOT_AVAILABLE", "AVAILABLE", "INSTALLED_BY_DEFAULT"]);
 const ALLOWED_AUTHENTICATION = new Set(["ON_INSTALL", "ON_USE"]);
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+const HTTPS_URL = /^https:\/\/[A-Za-z0-9.-]+(?:\/[^\s]*)?$/;
+const APACHE_2_LICENSE_SHA256 = "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4";
+const REQUIRED_POLICY_FILES = ["PRIVACY.md", "TERMS.md", "SECURITY.md", "SUPPORT.md"];
 
 function exactKeys(value, expected, label, errors) {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -26,13 +32,24 @@ function nonEmptyString(value, label, errors) {
   if (typeof value !== "string" || !value.trim()) errors.push(`${label} must be a non-empty string`);
 }
 
+function httpsUrl(value, label, errors) {
+  if (typeof value !== "string" || !HTTPS_URL.test(value)) errors.push(`${label} must be an HTTPS URL`);
+}
+
+function validatePublisherAuthor(value, label, errors) {
+  exactKeys(value, ["email", "name", "url"], label, errors);
+  if (value?.name !== "Openly Useful") errors.push(`${label}.name must be Openly Useful`);
+  if (value?.url !== "https://openlyuseful.org") errors.push(`${label}.url must be https://openlyuseful.org`);
+  if (value?.email !== "hello@openlyuseful.org") errors.push(`${label}.email must be hello@openlyuseful.org`);
+}
+
 function validateCodexMarketplace(value, errors) {
   exactKeys(value, ["interface", "name", "plugins"], "Codex marketplace", errors);
   nonEmptyString(value?.name, "Codex marketplace name", errors);
   exactKeys(value?.interface, ["displayName"], "Codex marketplace interface", errors);
-  nonEmptyString(value?.interface?.displayName, "Codex marketplace interface.displayName", errors);
-  if (!Array.isArray(value?.plugins) || value.plugins.length !== 1) {
-    errors.push("Codex marketplace must contain exactly one plugin entry");
+  if (value?.interface?.displayName !== "Openly Useful") errors.push("Codex marketplace interface.displayName must be Openly Useful");
+  if (!Array.isArray(value?.plugins) || value.plugins.length !== 2) {
+    errors.push("Codex marketplace must contain Project Status and RunGlance plugin entries");
     return;
   }
   const plugin = value.plugins[0];
@@ -45,6 +62,14 @@ function validateCodexMarketplace(value, errors) {
   exactKeys(plugin.policy, ["authentication", "installation"], "Codex marketplace plugin policy", errors);
   if (!ALLOWED_INSTALLATION.has(plugin.policy?.installation)) errors.push("Codex marketplace installation policy is invalid");
   if (!ALLOWED_AUTHENTICATION.has(plugin.policy?.authentication)) errors.push("Codex marketplace authentication policy is invalid");
+  const runGlance = value.plugins[1];
+  exactKeys(runGlance, ["category", "name", "policy", "source"], "Codex RunGlance marketplace plugin", errors);
+  if (runGlance?.name !== "runglance") errors.push("Codex RunGlance marketplace plugin name must be runglance");
+  if (runGlance?.source?.source !== "local" || runGlance?.source?.path !== "./plugins/openai/runglance") {
+    errors.push("Codex RunGlance marketplace plugin source must target the OpenAI RunGlance wrapper");
+  }
+  if (!ALLOWED_INSTALLATION.has(runGlance?.policy?.installation)) errors.push("Codex RunGlance installation policy is invalid");
+  if (!ALLOWED_AUTHENTICATION.has(runGlance?.policy?.authentication)) errors.push("Codex RunGlance authentication policy is invalid");
 }
 
 function validateClaudeMarketplace(value, version, errors) {
@@ -53,10 +78,9 @@ function validateClaudeMarketplace(value, version, errors) {
   nonEmptyString(value?.name, "Claude marketplace name", errors);
   nonEmptyString(value?.description, "Claude marketplace description", errors);
   if (value?.version !== version) errors.push("Claude marketplace version differs from VERSION");
-  exactKeys(value?.owner, ["name"], "Claude marketplace owner", errors);
-  nonEmptyString(value?.owner?.name, "Claude marketplace owner.name", errors);
-  if (!Array.isArray(value?.plugins) || value.plugins.length !== 1) {
-    errors.push("Claude marketplace must contain exactly one plugin entry");
+  validatePublisherAuthor(value?.owner, "Claude marketplace owner", errors);
+  if (!Array.isArray(value?.plugins) || value.plugins.length !== 2) {
+    errors.push("Claude marketplace must contain Project Status and RunGlance plugin entries");
     return;
   }
   const plugin = value.plugins[0];
@@ -67,25 +91,35 @@ function validateClaudeMarketplace(value, version, errors) {
   if (plugin.version !== version) errors.push("Claude marketplace plugin version differs from VERSION");
   nonEmptyString(plugin.description, "Claude marketplace plugin description", errors);
   nonEmptyString(plugin.category, "Claude marketplace plugin category", errors);
-  exactKeys(plugin.author, ["name"], "Claude marketplace plugin author", errors);
-  nonEmptyString(plugin.author?.name, "Claude marketplace plugin author.name", errors);
+  validatePublisherAuthor(plugin.author, "Claude marketplace plugin author", errors);
+  const runGlance = value.plugins[1];
+  exactKeys(runGlance, ["author", "category", "description", "name", "source", "strict", "version"], "Claude RunGlance marketplace plugin", errors);
+  if (runGlance?.name !== "runglance") errors.push("Claude RunGlance marketplace plugin name must be runglance");
+  if (runGlance?.source !== "./plugins/claude/runglance") errors.push("Claude RunGlance marketplace plugin source must target the Claude RunGlance wrapper");
+  if (runGlance?.strict !== true) errors.push("Claude RunGlance marketplace plugin must use strict manifest mode");
+  if (runGlance?.version !== version) errors.push("Claude RunGlance marketplace plugin version differs from VERSION");
+  validatePublisherAuthor(runGlance?.author, "Claude RunGlance marketplace plugin author", errors);
 }
 
-function validatePluginManifest(value, host, version, mcpIncluded, errors) {
-  const common = ["author", "description", "name", "skills", "version"];
+function validatePluginManifest(value, host, version, mcpIncluded, errors, metadata) {
+  const common = ["author", "description", "homepage", "license", "name", "repository", "skills", "version"];
   const keys = host === "openai" ? [...common, "interface"] : common;
   if (mcpIncluded) keys.push("mcpServers");
   exactKeys(value, keys, `${host} plugin manifest`, errors);
-  if (value?.name !== "project-status") errors.push(`${host} plugin manifest name must be project-status`);
+  if (value?.name !== metadata?.name) errors.push(`${host} plugin manifest name must be ${metadata?.name ?? "the canonical product name"}`);
   if (value?.version !== version || !SEMVER.test(value?.version ?? "")) errors.push(`${host} plugin manifest version differs from VERSION`);
   if (value?.skills !== "./skills/") errors.push(`${host} plugin manifest skills must be ./skills/`);
   nonEmptyString(value?.description, `${host} plugin manifest description`, errors);
-  exactKeys(value?.author, ["name"], `${host} plugin manifest author`, errors);
-  nonEmptyString(value?.author?.name, `${host} plugin manifest author.name`, errors);
+  validatePublisherAuthor(value?.author, `${host} plugin manifest author`, errors);
+  if (value?.homepage !== metadata?.homepage) errors.push(`${host} plugin manifest homepage differs from canonical metadata`);
+  if (value?.repository !== metadata?.repository) errors.push(`${host} plugin manifest repository differs from canonical metadata`);
+  if (value?.license !== "Apache-2.0") errors.push(`${host} plugin manifest license must be Apache-2.0`);
+  httpsUrl(value?.homepage, `${host} plugin manifest homepage`, errors);
+  httpsUrl(value?.repository, `${host} plugin manifest repository`, errors);
   if (mcpIncluded && value?.mcpServers !== "./.mcp.json") errors.push(`${host} plugin manifest mcpServers must target ./.mcp.json`);
   if (!mcpIncluded && "mcpServers" in (value ?? {})) errors.push(`${host} plugin manifest cannot declare MCP without a built companion`);
   if (host === "openai") {
-    const required = ["capabilities", "category", "defaultPrompt", "developerName", "displayName", "longDescription", "shortDescription"];
+    const required = ["capabilities", "category", "defaultPrompt", "developerName", "displayName", "longDescription", "privacyPolicyURL", "shortDescription", "supportURL", "termsOfServiceURL", "websiteURL"];
     exactKeys(value?.interface, required, "OpenAI plugin interface", errors);
     for (const key of required.filter((key) => key !== "capabilities" && key !== "defaultPrompt")) {
       nonEmptyString(value?.interface?.[key], `OpenAI plugin interface.${key}`, errors);
@@ -96,6 +130,17 @@ function validatePluginManifest(value, host, version, mcpIncluded, errors) {
     if (!Array.isArray(value?.interface?.defaultPrompt) || value.interface.defaultPrompt.length < 1 || value.interface.defaultPrompt.length > 3) {
       errors.push("OpenAI plugin interface.defaultPrompt must contain one to three prompts");
     }
+    if (value?.interface?.developerName !== "Openly Useful") errors.push("OpenAI plugin interface.developerName must be Openly Useful");
+    const urls = {
+      websiteURL: metadata?.homepage,
+      privacyPolicyURL: metadata?.privacy,
+      termsOfServiceURL: metadata?.terms,
+      supportURL: metadata?.support,
+    };
+    for (const [field, expected] of Object.entries(urls)) {
+      if (value?.interface?.[field] !== expected) errors.push(`OpenAI plugin interface.${field} differs from canonical metadata`);
+      httpsUrl(value?.interface?.[field], `OpenAI plugin interface.${field}`, errors);
+    }
   }
 }
 
@@ -105,7 +150,7 @@ function readJson(path) {
 
 export function validateCompanionVersions(version, errors, root = releaseRoot) {
   const versions = {};
-  for (const companion of ["mcp", "monitor"]) {
+  for (const companion of ["mcp", "monitor", "runglance-mcp"]) {
     const packagePath = join(root, "packages", companion, "package.json");
     if (!existsSync(packagePath)) continue;
     try {
@@ -122,27 +167,161 @@ export function validateCompanionVersions(version, errors, root = releaseRoot) {
   return versions;
 }
 
-function releaseGates(metadata) {
-  const licensePath = join(releaseRoot, "LICENSE");
-  const licenseSelected = existsSync(licensePath) && statSync(licensePath).isFile() && readFileSync(licensePath, "utf8").trim().length > 0;
-  const publisherIdentified = Boolean(
-    metadata?.author?.name
-    && (metadata.author.url || metadata.homepage || metadata.repository),
+export function validateMcpDistributionIdentity(version, errors, root = releaseRoot) {
+  const repository = "https://github.com/Openly-Useful/project-status";
+  const components = {
+    projectStatus: {
+      packagePath: join(root, "packages", "mcp", "package.json"),
+      registryPath: join(root, "mcp-registry", "project-status", "server.json"),
+      packageName: "@openly-useful/project-status-mcp",
+      mcpName: "org.openlyuseful/project-status",
+    },
+    runGlance: {
+      packagePath: join(root, "packages", "runglance-mcp", "package.json"),
+      registryPath: join(root, "mcp-registry", "runglance", "server.json"),
+      packageName: "@openly-useful/runglance-mcp",
+      mcpName: "org.openlyuseful/runglance",
+    },
+  };
+  const result = {};
+  for (const [key, expected] of Object.entries(components)) {
+    let packageManifest;
+    let registryManifest;
+    try {
+      packageManifest = readJson(expected.packagePath);
+    } catch (error) {
+      errors.push(`${expected.packagePath} is missing or invalid: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
+    try {
+      registryManifest = readJson(expected.registryPath);
+    } catch (error) {
+      errors.push(`${expected.registryPath} is missing or invalid: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
+    if (packageManifest.name !== expected.packageName) errors.push(`${key} package name must be ${expected.packageName}`);
+    if (packageManifest.mcpName !== expected.mcpName) errors.push(`${key} package mcpName must be ${expected.mcpName}`);
+    if (packageManifest.version !== version) errors.push(`${key} package version differs from VERSION`);
+    if (packageManifest.license !== "Apache-2.0") errors.push(`${key} package license must be Apache-2.0`);
+    if (packageManifest.repository?.url !== `git+${repository}.git`) errors.push(`${key} package repository is invalid`);
+    if (packageManifest.bugs !== "https://openlyuseful.org/support") errors.push(`${key} package support URL is invalid`);
+    if (registryManifest.name !== expected.mcpName) errors.push(`${key} registry name must match package mcpName`);
+    if (registryManifest.version !== version) errors.push(`${key} registry version differs from VERSION`);
+    if (registryManifest.repository?.url !== repository || registryManifest.repository?.source !== "github") errors.push(`${key} registry repository is invalid`);
+    if (!Array.isArray(registryManifest.packages) || registryManifest.packages.length !== 1) {
+      errors.push(`${key} registry must expose exactly one package`);
+    } else {
+      const registryPackage = registryManifest.packages[0];
+      if (registryPackage.registryType !== "npm") errors.push(`${key} registry package type must be npm`);
+      if (registryPackage.identifier !== expected.packageName) errors.push(`${key} registry package identifier must match the package name`);
+      if (registryPackage.version !== version) errors.push(`${key} registry package version differs from VERSION`);
+      if (registryPackage.transport?.type !== "stdio") errors.push(`${key} registry transport must be stdio`);
+    }
+    result[key] = { packageName: packageManifest.name, mcpName: packageManifest.mcpName, version: packageManifest.version };
+  }
+  return result;
+}
+
+export function externalActivationSatisfied(publisher) {
+  return Boolean(
+    publisher?.legal?.status === "active"
+    && publisher?.legal?.activeName === publisher?.legal?.plannedName
+    && publisher?.repositoryContext?.futureEntityPublishing === "documented"
+    && publisher?.publication?.externalPublicationAllowed === true
+    && publisher?.publication?.authorization === "authorized"
+    && Array.isArray(publisher?.publication?.blockingRequirements)
+    && publisher.publication.blockingRequirements.length === 0
   );
+}
+
+function releaseGates(release) {
+  const licensePath = join(releaseRoot, "LICENSE");
+  const licenseDigest = existsSync(licensePath) && statSync(licensePath).isFile()
+    ? createHash("sha256").update(readFileSync(licensePath)).digest("hex")
+    : null;
+  const licenseExact = licenseDigest === APACHE_2_LICENSE_SHA256;
+  const noticePath = join(releaseRoot, "THIRD_PARTY_NOTICES.md");
+  let noticesCurrent = false;
+  let noticeDetail = "THIRD_PARTY_NOTICES.md is missing.";
+  try {
+    const noticePlan = createThirdPartyNoticePlan();
+    noticesCurrent = existsSync(noticePath)
+      && statSync(noticePath).isFile()
+      && readFileSync(noticePath, "utf8") === noticePlan.contents;
+    noticeDetail = noticesCurrent
+      ? `Third-party notices match ${noticePlan.packageCount} pinned runtime dependencies.`
+      : "THIRD_PARTY_NOTICES.md differs from the pinned site/MCP runtime dependency graph.";
+  } catch (error) {
+    noticeDetail = `Third-party notice verification could not run: ${error instanceof Error ? error.message : String(error)}`;
+  }
+  const policyFileProblems = [];
+  const expectedPolicyUrls = {
+    "PRIVACY.md": release.publisher?.policies?.privacy,
+    "TERMS.md": release.publisher?.policies?.terms,
+    "SECURITY.md": release.publisher?.policies?.security,
+    "SUPPORT.md": release.publisher?.policies?.support,
+  };
+  for (const name of REQUIRED_POLICY_FILES) {
+    const path = join(releaseRoot, name);
+    if (!existsSync(path) || !statSync(path).isFile()) policyFileProblems.push(`${name} is missing`);
+    else if (!readFileSync(path, "utf8").includes(expectedPolicyUrls[name] ?? "__missing_policy_url__")) {
+      policyFileProblems.push(`${name} does not reference its canonical Openly Useful URL`);
+    }
+  }
+  const publisherConfigured = Boolean(
+    publisherErrors(release.publisher).length === 0
+    && release.publisher?.displayName === "Openly Useful"
+    && release.metadata?.author?.name === "Openly Useful"
+    && release.runGlanceMetadata?.author?.name === "Openly Useful",
+  );
+  const founderRecordConfirmed = Boolean(
+    release.publisher?.repositoryContext?.runGlanceCopyright?.authorshipStatus === "sole-author-confirmed"
+    && release.publisher?.repositoryContext?.runGlanceCopyright?.ownerType === "individual-founder"
+    && release.publisher?.repositoryContext?.runGlanceCopyright?.ownershipStatus === "personal"
+    && release.publisher?.repositoryContext?.runGlanceCopyright?.transferRequired === false
+    && release.publisher?.repositoryContext?.currentOpenSourcePublication === "founder-authorized",
+  );
+  const externalActivationComplete = externalActivationSatisfied(release.publisher);
   return [
     {
-      id: "license-selection",
-      status: licenseSelected ? "satisfied" : "pending_implementation",
-      detail: licenseSelected
-        ? "LICENSE is present."
-        : "Apache License 2.0 is selected, but the LICENSE copyright holder and complete third-party notice set must be implemented before public distribution.",
+      id: "apache-2.0-license",
+      status: licenseExact ? "satisfied" : "pending_implementation",
+      detail: licenseExact
+        ? "LICENSE exactly matches the Apache License 2.0 reference text."
+        : "LICENSE is missing or does not exactly match the Apache License 2.0 reference text.",
     },
     {
-      id: "publisher-metadata",
-      status: publisherIdentified ? "satisfied" : "pending_owner_decision",
-      detail: publisherIdentified
-        ? "Publisher metadata includes a public identity URL."
-        : "Confirm the publisher identity and public repository/homepage URLs before publication.",
+      id: "third-party-notices",
+      status: noticesCurrent ? "satisfied" : "pending_implementation",
+      detail: noticeDetail,
+    },
+    {
+      id: "public-policy-files",
+      status: policyFileProblems.length === 0 ? "satisfied" : "pending_implementation",
+      detail: policyFileProblems.length === 0
+        ? "Privacy, terms, security, and support files reference their canonical Openly Useful URLs."
+        : policyFileProblems.join("; "),
+    },
+    {
+      id: "publisher-contract",
+      status: publisherConfigured ? "satisfied" : "pending_implementation",
+      detail: publisherConfigured
+        ? "Both products use Openly Useful as the publisher/developer brand and reference the canonical publisher mirror."
+        : "Publisher metadata is incomplete or inconsistent across Project Status and RunGlance.",
+    },
+    {
+      id: "founder-record-and-open-source-authorization",
+      status: founderRecordConfirmed ? "satisfied" : "pending_implementation",
+      detail: founderRecordConfirmed
+        ? "RunGlance sole authorship and personal ownership are owner-confirmed; current open-source publication is founder-authorized and no ownership transfer is required."
+        : "The owner-confirmed founder record or current open-source publication authorization is not encoded correctly.",
+    },
+    {
+      id: "entity-and-external-verification",
+      status: externalActivationComplete ? "satisfied" : "pending_external_verification",
+      detail: externalActivationComplete
+        ? "Publisher entity formation, future-entity publishing authorization, external verification, and blocker clearance are recorded as complete."
+        : "Openly Useful LLC formation, documentation of its future publishing authorization, provider/business verification, public URL reachability, and external activation remain pending. IP assignment, ownership transfer, and ownership verification are not required.",
     },
   ];
 }
@@ -150,15 +329,21 @@ function releaseGates(metadata) {
 export function checkRelease() {
   const release = inspectReleaseState();
   const packagePlan = createPackagePlan();
-  const errors = [...release.errors, ...packagePlan.errors];
+  const runGlancePackagePlan = createRunGlancePackagePlan();
+  const errors = [...release.errors, ...packagePlan.errors, ...runGlancePackagePlan.errors];
   const companionVersions = validateCompanionVersions(release.version, errors);
+  const mcpDistributions = validateMcpDistributionIdentity(release.version, errors);
   if (release.marketplaces) {
     validateCodexMarketplace(release.marketplaces.openai, errors);
     validateClaudeMarketplace(release.marketplaces.claude, release.version, errors);
   }
   if (release.manifests) {
-    validatePluginManifest(release.manifests.openai, "openai", release.version, release.mcpIncluded, errors);
-    validatePluginManifest(release.manifests.claude, "claude", release.version, release.mcpIncluded, errors);
+    validatePluginManifest(release.manifests.openai, "openai", release.version, release.mcpIncluded, errors, release.metadata);
+    validatePluginManifest(release.manifests.claude, "claude", release.version, release.mcpIncluded, errors, release.metadata);
+  }
+  if (release.runGlanceManifests) {
+    validatePluginManifest(release.runGlanceManifests.openai, "openai", release.version, release.runGlanceMcpIncluded, errors, release.runGlanceMetadata);
+    validatePluginManifest(release.runGlanceManifests.claude, "claude", release.version, release.runGlanceMcpIncluded, errors, release.runGlanceMetadata);
   }
   const changelogPath = join(releaseRoot, "CHANGELOG.md");
   if (!existsSync(changelogPath)) errors.push("CHANGELOG.md is missing");
@@ -170,7 +355,7 @@ export function checkRelease() {
     if (!readme.includes("skill/project-status")) errors.push("README.md must identify the canonical skill source");
     if (!readme.includes("release-sync.mjs")) errors.push("README.md must document generated-wrapper synchronization");
   }
-  const gates = releaseGates(release.metadata);
+  const gates = releaseGates(release);
   const uniqueErrors = [...new Set(errors)];
   return {
     valid: uniqueErrors.length === 0,
@@ -178,9 +363,16 @@ export function checkRelease() {
     publishReady: uniqueErrors.length === 0 && gates.every((gate) => gate.status === "satisfied"),
     version: release.version,
     companionVersions,
+    mcpDistributions,
     mcpIncluded: release.mcpIncluded,
     wrapperFileCount: release.actualFileCount,
     archives: Object.fromEntries(Object.entries(packagePlan.archives).map(([kind, archive]) => [kind, {
+      file: archive.name,
+      sha256: archive.sha256,
+      size: archive.size,
+      entryCount: archive.entries.length,
+    }])),
+    runGlanceArchives: Object.fromEntries(Object.entries(runGlancePackagePlan.archives).map(([kind, archive]) => [kind, {
       file: archive.name,
       sha256: archive.sha256,
       size: archive.size,
@@ -196,7 +388,7 @@ function format(result) {
     `RELEASE CHECK ${result.valid ? "OK" : "FAILED"}`,
     `Version: ${result.version ?? "unknown"}`,
     `Distribution packages: ${result.distributionReady ? "ready" : "not ready"}`,
-    `Public publication: ${result.publishReady ? "ready" : "waiting on owner decisions"}`,
+    `Public publication: ${result.publishReady ? "ready" : "waiting on external verification and activation"}`,
     `MCP companion: ${result.mcpIncluded ? "included" : "not built; omitted"}`,
     ...result.releaseGates.map((gate) => `- ${gate.id}: ${gate.status} — ${gate.detail}`),
     ...result.errors.map((error) => `ERROR: ${error}`),

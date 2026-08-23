@@ -185,4 +185,5 @@ export const fallbackStatus = {
     calendarDays: null,
     assumption: "Active task estimates are required before a credible critical-path date can be calculated.",
   },
+  liveActivity: null,
 };

@@ -1,4 +1,5 @@
 import { fallbackStatus } from "./status-fallback.js";
+import { normalizeActivity } from "./activity-model.js";
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -197,7 +198,7 @@ function normalizeMonitor(monitor, base) {
 }
 
 /** Convert a strict public projection into the stable dashboard view model. */
-export function mergeStatus(manifest, monitor, base = fallbackStatus) {
+export function mergeStatus(manifest, monitor, base = fallbackStatus, activity = null) {
   const canonical = manifest?.initiative && typeof manifest.initiative === "object"
     ? normalizeCanonical(manifest, base)
     : {
@@ -210,11 +211,20 @@ export function mergeStatus(manifest, monitor, base = fallbackStatus) {
       criticalPath: { ...base.criticalPath, ...(manifest?.criticalPath ?? {}) },
     };
 
+  const activitySource = activity
+    ?? monitor?.liveActivity
+    ?? monitor?.activity
+    ?? (monitor?.thread && monitor?.counts ? monitor : null)
+    ?? manifest?.liveActivity
+    ?? canonical.liveActivity
+    ?? null;
+
   return {
     ...canonical,
     monitoring: normalizeMonitor(monitor, {
       ...base.monitoring,
       ...(canonical.monitoring ?? {}),
     }),
+    liveActivity: normalizeActivity(activitySource),
   };
 }

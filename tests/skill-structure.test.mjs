@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { join, resolve, sep } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { expectedPluginManifests, inspectReleaseState } from "../scripts/release-sync.mjs";
+import {
+  canonicalSkillRoot,
+  expectedPluginManifests,
+  inspectReleaseState,
+} from "../scripts/release-sync.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const skillRoot = join(root, "skill", "project-status");
@@ -17,6 +21,33 @@ function walk(directory) {
   }
   return output;
 }
+
+function projectStatusSkillRoots(directory, relativeDirectory = "") {
+  const ignoredDirectories = new Set([".git", "artifacts", "dist", "node_modules"]);
+  const roots = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.isDirectory() && ignoredDirectories.has(entry.name)) continue;
+    const relativePath = relativeDirectory ? join(relativeDirectory, entry.name) : entry.name;
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) roots.push(...projectStatusSkillRoots(path, relativePath));
+    else if (entry.isFile() && entry.name === "SKILL.md" && /^name: project-status$/m.test(readFileSync(path, "utf8"))) {
+      roots.push(relativePath.split(sep).join("/"));
+    }
+  }
+  return roots.sort();
+}
+
+test("the repository has one editable canonical Project Status skill and two generated host wrappers", () => {
+  assert.equal(resolve(canonicalSkillRoot), resolve(skillRoot));
+  assert.deepEqual(projectStatusSkillRoots(root), [
+    "plugins/claude/project-status/skills/project-status/SKILL.md",
+    "plugins/openai/project-status/skills/project-status/SKILL.md",
+    "skill/project-status/SKILL.md",
+  ]);
+  assert.equal(existsSync(join(root, ".agent-skills", "project-status", "SKILL.md")), false);
+  assert.equal(existsSync(join(root, ".agents", "skills", "project-status", "SKILL.md")), false);
+  assert.equal(existsSync(join(root, ".claude", "skills", "project-status", "SKILL.md")), false);
+});
 
 test("portable SKILL frontmatter has only name and description", () => {
   const contents = readFileSync(join(skillRoot, "SKILL.md"), "utf8");
