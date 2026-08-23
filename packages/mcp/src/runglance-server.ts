@@ -375,7 +375,7 @@ export function createRunGlanceServer(options: RunGlanceServerOptions = {}): Mcp
   const server = new McpServer(
     {
       name: "runglance-mcp-server",
-      version: "1.2.0",
+      version: "1.2.1",
       description: "Read-only access to local RunGlance progress, work, usage, locks, and verification receipts.",
     },
     {

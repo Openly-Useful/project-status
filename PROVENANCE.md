@@ -22,7 +22,7 @@ formation-pending and must not be described as formed, active, as the current
 operator, or as the owner. A future LLC may later publish, operate, and license
 the project under separately documented founder authorization.
 
-The canonical public repository target for both products in release 1.2.0 is
+The canonical public repository target for both products in release 1.2.1 is
 <https://github.com/Openly-Useful/project-status>. Product packages, MCP Registry
 records, and host-specific plugin metadata derive their repository and publisher
 fields from the governed release sources in this repository.

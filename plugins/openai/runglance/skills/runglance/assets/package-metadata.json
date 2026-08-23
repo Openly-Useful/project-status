@@ -1,6 +1,6 @@
 {
   "name": "runglance",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Live progress for any agent, skill, test, workflow, or automation run, with the optional read-only RunGlance MCP companion.",
   "author": {
     "name": "Openly Useful",

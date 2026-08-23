@@ -15,7 +15,7 @@ test("Project Status npm and MCP Registry identities agree", () => {
   const packageJson = json(join(packageRoot, "package.json"));
   const serverJson = json(join(projectRoot, "mcp-registry", "project-status", "server.json"));
   assert.equal(packageJson.name, "@openly-useful/project-status-mcp");
-  assert.equal(packageJson.version, "1.2.0");
+  assert.equal(packageJson.version, "1.2.1");
   assert.equal(packageJson.mcpName, "org.openlyuseful/project-status");
   assert.equal(serverJson.name, packageJson.mcpName);
   assert.equal(serverJson.version, packageJson.version);

@@ -183,7 +183,7 @@ Review the generated manifests and skill contents before installing. Marketplace
 
 ## Versioning and release gates
 
-The distribution version is recorded in `VERSION`, both canonical component metadata files, generated plugin manifests, the Claude marketplace entry, MCP and monitor companion packages, and archive checksums. `node scripts/release-check.mjs` requires them to agree. Release `1.2.0` supersedes the unpublished `1.1.0` source identifier because that identifier collides with a materially different cached Project Status distribution.
+The distribution version is recorded in `VERSION`, both canonical component metadata files, generated plugin manifests, the Claude marketplace entry, MCP and monitor companion packages, and archive checksums. `node scripts/release-check.mjs` requires them to agree. Release `1.2.1` is the provenance-aligned patch release for the founder-operated publication gate and normalized npm CLI manifests merged after `v1.2.0`; the `1.2.0` line had already superseded the unpublished `1.1.0` source identifier because that identifier collided with a materially different cached Project Status distribution.
 
 `publisher/publisher.json` is the repository mirror/consumer of <https://openlyuseful.org/publisher/manifest.json>. Openly Useful is the publisher/developer brand. Openly Useful LLC is the planned publisher, operator, and licensee, but remains formation-pending and must not be described as already formed. The `.org` identity is the canonical open-source, publisher, policy, security, and support surface; `.com` is the studio/commercial identity. Component metadata points to the canonical public <https://github.com/Openly-Useful/project-status> repository and <https://openlyuseful.org/support>.
 

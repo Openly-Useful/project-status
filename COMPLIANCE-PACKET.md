@@ -1,7 +1,7 @@
 # Local compliance packet
 
 Status: identity, licensing, policy, runtime-notice, package, namespace, and
-founder-authorization inputs are implemented for release `1.2.0`. npm package
+founder-authorization inputs are implemented for release `1.2.1`. npm package
 publication is authorized but has not been performed. Marketplace submission,
 MCP Registry submission, hosted operation, and provider review remain separate
 external actions. This packet is not legal advice.

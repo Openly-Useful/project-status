@@ -2,14 +2,20 @@
 
 All notable distribution changes are documented here. This project follows semantic versioning for skill and plugin artifacts.
 
-## Unreleased
+## 1.2.1 - 2026-08-23
 
 ### Changed
 
+- Advanced Project Status, RunGlance, both npm package contracts, both MCP Registry records, and both provider marketplaces to `1.2.1` so every future npm/MCP publication can resolve to the same released source commit.
 - Aligned the repository publisher mirror with the live founder-operated Openly Useful authority while Openly Useful LLC remains formation-pending.
 - Made npm package readiness depend on direct founder-owner authorization, exact package/MCP namespaces, public-policy files, and deterministic release validation instead of LLC formation or provider marketplace review.
 - Normalized both npm CLI `bin` maps and made the combined MCP build mark its bundled commands executable so npm preserves every published command without manifest correction.
 - Kept npm account authentication at the actual registry boundary and retained marketplace, MCP Registry, deployment, and future LLC operation as separate workflows.
+
+### Release gates
+
+- The `v1.2.1` GitHub tag and all six deterministic release archives must resolve to the same reviewed merge commit.
+- npm package publication and MCP Registry submission remain separate actions and are not performed by this GitHub patch release.
 
 ## 1.2.0 - 2026-08-16
 

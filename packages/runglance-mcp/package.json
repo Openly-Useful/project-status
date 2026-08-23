@@ -1,6 +1,6 @@
 {
   "name": "@openly-useful/runglance-mcp",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "mcpName": "org.openlyuseful/runglance",
   "description": "Read-only MCP access to local RunGlance progress, work, usage, locks, and run receipts.",
   "license": "Apache-2.0",
