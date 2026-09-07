@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 
 import * as z from "zod/v4";
@@ -377,6 +377,14 @@ function configuredRuntimeDirectory(options: {
 export function createRuntimeActivitySource(runtimeDirectory: string): ActivitySource {
   return {
     async load(): Promise<unknown> {
+      let entries: string[] = [];
+      try { entries = await readdir(resolve(runtimeDirectory, "sessions")); }
+      catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw new ActivityAccessError("activity_unreadable", "Session selection could not be read.", "Confirm runtime directory read access.");
+      }
+      if (entries.filter(name => name.endsWith(".metadata.json")).length > 1) {
+        throw new ActivityAccessError("activity_snapshot_invalid", "Multiple RunGlance sessions require explicit selection.", "Set RUNGLANCE_ACTIVITY_FILE to the intended session snapshot, or use an isolated runtime directory.");
+      }
       try {
         return await createFileActivitySource(resolve(runtimeDirectory, "activity-snapshot.json")).load();
       } catch (error) {

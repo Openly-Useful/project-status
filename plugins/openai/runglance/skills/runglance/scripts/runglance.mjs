@@ -150,6 +150,10 @@ function latestSnapshotPath(root) {
 
 function getSessionId(root, requested) {
   if (requested) return requested;
+  const sessions = join(root, "sessions");
+  if (existsSync(sessions) && readdirSync(sessions).filter(name => name.endsWith(".metadata.json")).length > 1) {
+    throw new Error("Multiple RunGlance sessions exist; pass --session-id for the intended task or use its isolated --runtime-dir.");
+  }
   const active = readJson(activeSessionPath(root));
   if (!active?.sessionId) throw new Error("No active RunGlance session. Run `runglance.mjs start` or pass --session-id.");
   return active.sessionId;
@@ -290,6 +294,8 @@ function setupPlan(options) {
     shellExecution: false,
     environmentOverride: "RUNGLANCE_RUNTIME_DIR",
     hostConfigurationMutation: false,
+    connectionState: "not_observed",
+    telemetryObserved: false,
     instructions: setupInstructions(options),
   };
 }
@@ -315,6 +321,8 @@ function applySetup(options, clock) {
     scope: "repository-local",
     host: options.host ?? "all",
     hostConfigurationApplied: false,
+    connectionState: "not_observed",
+    telemetryObserved: false,
     runtimeDirectoryOverride: "RUNGLANCE_RUNTIME_DIR",
     instructions: setupInstructions(options),
   };
@@ -414,6 +422,10 @@ function updateEvent(options, clock) {
 function readSnapshot(options, clock) {
   const root = runtimeRoot(options);
   const sessionId = getSessionId(root, options.session_id);
+  const persisted = readJson(sessionPaths(root, sessionId).state);
+  if (persisted?.schemaVersion === 1 && persisted.sessionId === sessionId && persisted.lastSequence > 0) {
+    return createActivitySnapshot(persisted, { clock });
+  }
   const loaded = loadState(root, sessionId, clock);
   if (loaded.events.length === 0) throw new Error(`No activity events for session ${sessionId}`);
   return createActivitySnapshot(loaded.state, { clock });

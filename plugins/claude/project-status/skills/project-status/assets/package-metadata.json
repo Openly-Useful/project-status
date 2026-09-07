@@ -1,6 +1,6 @@
 {
   "name": "project-status",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "Evidence-backed project readiness, provenance, monitoring, dashboards, and repository attachment.",
   "author": {
     "name": "Openly Useful",
@@ -17,7 +17,7 @@
   "publisherManifest": "https://openlyuseful.org/publisher/manifest.json",
   "openai": {
     "interface": {
-      "displayName": "Project Status",
+      "displayName": "StatusGlance / Readiness",
       "shortDescription": "Evidence-backed project readiness",
       "longDescription": "Inspect evidence-backed readiness, validate provenance and freshness, run bounded live-health checks, generate a safe /status dashboard, and attach the portable Project Status skill across agent hosts.",
       "developerName": "Openly Useful",

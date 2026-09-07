@@ -14,6 +14,7 @@ import {
 import { builtinModules } from "node:module";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { MANIFEST_SCHEMA } from "../packages/core/schema.mjs";
 
 export const releaseRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 export const canonicalSkillRoot = join(releaseRoot, "skill", "project-status");
@@ -109,7 +110,7 @@ export function bundledEntrypointErrors(contents) {
   const source = Buffer.isBuffer(contents) ? contents.toString("utf8") : String(contents);
   const errors = [];
   if (!source.startsWith("#!/usr/bin/env node\n")) errors.push("MCP dist/index.js must retain its Node executable shebang");
-  if (!source.includes("../../core/index.mjs")) errors.push("MCP dist/index.js must resolve the packaged ../../core/index.mjs runtime");
+  if (source.includes('new URL("../../core/index.mjs"')) errors.push("MCP dist/index.js must bundle core instead of requiring a sibling source tree");
   if (/sourceMappingURL=/.test(source)) errors.push("MCP dist/index.js cannot reference a source map");
 
   const specifiers = [];
@@ -318,7 +319,6 @@ export function expectedPluginManifests(metadata, { mcpEnabled = false } = {}) {
         websiteURL: metadata.homepage,
         privacyPolicyURL: metadata.privacy,
         termsOfServiceURL: metadata.terms,
-        supportURL: metadata.support,
       },
     },
     claude: {
@@ -416,9 +416,15 @@ function createExpectedModel() {
   addExpected(files, "plugins/claude/runglance/.claude-plugin/plugin.json", stableJson(runGlanceManifests.claude));
 
   try {
-    for (const source of walkFiles(canonicalSkillRoot)) {
+    const sources = new Map(walkFiles(canonicalSkillRoot).map(source => [source.relativePath, source.contents]));
+    sources.set("scripts/delivery.mjs", readFileSync(join(CORE_ROOT, "delivery.mjs")));
+    sources.set("assets/manifest.schema.json", Buffer.from(stableJson(MANIFEST_SCHEMA)));
+    for (const generated of ["scripts/delivery.mjs", "assets/manifest.schema.json"]) {
+      addExpected(files, `skill/project-status/${generated}`, sources.get(generated));
+    }
+    for (const [relativePath, contents] of sources) {
       for (const host of ["openai", "claude"]) {
-        addExpected(files, `plugins/${host}/project-status/skills/project-status/${source.relativePath}`, source.contents);
+        addExpected(files, `plugins/${host}/project-status/skills/project-status/${relativePath}`, contents);
       }
     }
   } catch (error) {
@@ -520,6 +526,10 @@ function createExpectedModel() {
 
 function actualWrapperFiles() {
   const files = new Map();
+  for (const relativePath of ["skill/project-status/scripts/delivery.mjs", "skill/project-status/assets/manifest.schema.json"]) {
+    const path = join(releaseRoot, relativePath);
+    if (existsSync(path)) files.set(relativePath, readFileSync(path));
+  }
   for (const marketplacePath of [".agents/plugins/marketplace.json", ".claude-plugin/marketplace.json"]) {
     const path = join(releaseRoot, marketplacePath);
     if (existsSync(path) && statSync(path).isFile()) files.set(marketplacePath, readFileSync(path));

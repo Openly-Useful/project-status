@@ -82,7 +82,7 @@ test("both products agree on publisher, policy URLs, version, and real MCP compa
     assert.equal(openai.interface.privacyPolicyURL, "https://openlyuseful.org/legal/privacy");
     assert.equal(openai.interface.termsOfServiceURL, "https://openlyuseful.org/legal/terms");
     assert.equal(openai.interface.securityURL, undefined);
-    assert.equal(openai.interface.supportURL, "https://openlyuseful.org/support");
+    assert.equal(Object.hasOwn(openai.interface, "supportURL"), false);
 
     for (const pluginRoot of [openaiRoot, claudeRoot]) {
       walk(pluginRoot);
@@ -280,6 +280,7 @@ test("release validation rejects MCP package and registry identity drift", (cont
 test("release sync rejects MCP entrypoints with post-install runtime imports", () => {
   const unsafe = `#!/usr/bin/env node\nimport "@modelcontextprotocol/server";\nconst core = new URL("../../core/index.mjs", import.meta.url);\n`;
   assert.deepEqual(bundledEntrypointErrors(unsafe), [
+    "MCP dist/index.js must bundle core instead of requiring a sibling source tree",
     "MCP dist/index.js has an unbundled runtime import: @modelcontextprotocol/server",
   ]);
 });

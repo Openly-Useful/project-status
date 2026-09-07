@@ -1,6 +1,20 @@
-# Project Status Initiative
+# StatusGlance
 
-Project Status turns a repository-local manifest into an evidence-backed readiness model. RunGlance is the separate, zero-model-call live-run companion: **RunGlance** names the portable skill/runtime, while **RunGlance HUD** names its compact terminal and dashboard surface. Both skills are portable across Claude, OpenAI/Codex, and generic CLIs; each has an optional, bounded, read-only MCP entrypoint.
+StatusGlance is Openly Useful's visibility family: **StatusGlance / Readiness** turns one repository-local manifest into evidence-backed delivery readiness; **StatusGlance / RunGlance** shows observed run activity without model polling. Both are portable across Claude, OpenAI/Codex, and generic CLIs, with optional bounded read-only MCP entrypoints.
+
+This compatibility-first branding release retains the `project-status` and `runglance` plugin IDs, npm/MCP names, commands, storage paths, repository URL, and Apache-2.0 license. Existing integrations do not need a rename migration. A status request reads existing evidence once; it does not start work, verification, monitoring, or installation.
+
+## The delivery loop
+
+Conductor Swarm owns execution: observe changes → shape coherent work → run ready independent lanes in parallel → verify and integrate at milestones → adapt → continue authorized work or finish. Pickup repairs missing context; Continuity handles actual transfers. These are complementary tools, not mandatory extra agents or serialized stages. [Agent Workflow Swarms](https://github.com/Openly-Useful/agent-workflow-swarms) defines the execution framework.
+
+StatusGlance observes that loop. Use existing host events, task IDs, and milestone evidence. No event stream means unknown activity. A local setup file does not prove host installation or connection. Repeated revisions call for an approach change within authorized execution, not an ever-growing review loop. Operations Pulse remains the opt-in recurring operations sibling; Skill Feedback Engine proposes durable improvements only when requested.
+
+## Alpha, Beta, and Live readiness
+
+The optional versioned [`delivery` extension](skill/project-status/references/delivery.md) references existing manifest tasks. Ordered stage scopes accumulate accepted work once; each shows its own denominator, remaining tasks and milestones, next integrated milestone, and acceptance gaps. Empty scope remains unknown. Current stage acceptance requires qualifying evidence and cleared gates; implementation progress and historical weighted credit remain separate.
+
+The bundled dashboard is a historical demonstration, not evidence of any user's current product readiness. Configure and validate real product scope before claiming Alpha, Beta, or Live completion.
 
 This repository contains eight related deliverables:
 

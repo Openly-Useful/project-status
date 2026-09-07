@@ -16,6 +16,7 @@ import {
   WAIT_KINDS,
 } from "./schema.mjs";
 import { resolveClock } from "./time.mjs";
+import { validateDelivery } from "./delivery.mjs";
 
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const ISO_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -589,7 +590,8 @@ function semanticValidation(collector, manifest, options) {
 
 function structuralValidation(collector, manifest) {
   const rootKeys = ["schemaVersion", "route", "initiative", "source", "audit", "totalWeight", "phases", "evidence", "gates", "dependencies"];
-  if (!collector.object(manifest, "$", rootKeys)) return;
+  if (!collector.object(manifest, "$", [...rootKeys, "delivery"], rootKeys)) return;
+  for (const error of validateDelivery(manifest)) collector.add(error.code, error.path, error.message);
   if (manifest.schemaVersion !== 1) collector.add("unsupported_schema_version", "$.schemaVersion", "must equal 1");
   collector.route(manifest.route, "$.route");
   collector.number(manifest.totalWeight, "$.totalWeight", { min: 100, max: 100 });

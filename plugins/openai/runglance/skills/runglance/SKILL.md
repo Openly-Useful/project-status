@@ -3,9 +3,21 @@ name: runglance
 description: Show truthful, low-overhead live progress for any agent, skill, test, workflow, or automation run. Use for a portable RunGlance HUD, workflow/skill/agent accounting, context and quota visibility when hosts report it, explicit lock state, one-second local status watching, host hook normalization, verification commands, and concise or verified final run receipts. Works without model calls, network access, API keys, or the optional read-only RunGlance MCP companion.
 ---
 
-# RunGlance
+# StatusGlance / RunGlance
 
 Give users an immediate, evidence-honest answer to “what is running, is it stuck, and what finished?” Keep the terminal HUD local and dependency-free; use the MCP companion only when a model needs bounded status queries.
+
+## Default invocation: one read-only snapshot
+
+Calling `$runglance` means inspect existing activity once. Use the known task session and runtime, or one bounded MCP query. Do not start a run, install hooks, watch, run tests, update the ledger, or emit a finish receipt merely to answer status. If no telemetry exists, report `not connected / no events observed`; do not manufacture activity.
+
+```sh
+node <skill-dir>/scripts/runglance.mjs show --session-id <known-session> --preset swarm
+```
+
+An explicit session or isolated runtime prevents cross-project selection. Multiple sessions without a selection are ambiguous. Show each lane's latest concrete result, blocker/next action, and measured progress when its denominator exists; otherwise show unknown. Distinguish implemented, tested, and accepted. Report repeated revision or stale evidence without launching corrective work from a status-only request.
+
+During authorized execution, record meaningful lifecycle/progress deltas and milestone verification, not every message or refresh. Reuse host events and existing task IDs. Use one local deterministic HUD process only when live watching was requested; do not schedule model polling. Loop roles are responsibilities, not mandatory extra agents.
 
 ## Preserve the truth boundary
 
@@ -27,6 +39,8 @@ node <skill-dir>/scripts/runglance.mjs setup instructions --host generic
 ```
 
 `setup guided` remains read-only. Run `setup apply --project-root <dir> --host <host>` only when the user requests repository-local configuration. It writes only `.runglance/setup.json`; it never edits global Codex, Claude, shell, tmux, or terminal settings.
+
+Configuration metadata is not host installation, connection, or observed telemetry. Verify and report each separately. Existing command names, runtime paths, and the `runglance` plugin ID remain compatible under the StatusGlance family.
 
 ## Start and render the RunGlance HUD
 

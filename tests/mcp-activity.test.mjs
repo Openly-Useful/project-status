@@ -18,6 +18,18 @@ const manifest = JSON.parse(await readFile(join(projectRoot, ".project-status", 
 const timestamp = "2026-08-15T20:00:00.000Z";
 const laterTimestamp = "2026-08-15T20:00:03.000Z";
 
+test("MCP runtime discovery refuses multiple sessions; an explicit snapshot stays selectable", async () => {
+  const runtime = await mkdtemp(join(tmpdir(), "runglance-mcp-selection-"));
+  await mkdir(join(runtime, "sessions"));
+  for (const id of ["one", "two"]) await writeFile(join(runtime, "sessions", `${id}.metadata.json`), "{}");
+  const snapshotPath = join(runtime, "activity-snapshot.json");
+  await writeFile(snapshotPath, JSON.stringify(activityFixture()));
+  const ambiguous = createConfiguredActivitySource({ environment: { RUNGLANCE_RUNTIME_DIR: runtime } });
+  await assert.rejects(() => ambiguous.load(), /Multiple RunGlance sessions/);
+  const explicit = createConfiguredActivitySource({ explicitPath: snapshotPath, environment: {} });
+  assert.equal((await explicit.load()).sessionId, "session-1");
+});
+
 function metric(value, truthClass = "exact", source = "host") {
   return { value, truthClass, source, observedAt: timestamp, unit: "percent" };
 }

@@ -61,7 +61,7 @@ test("portable SKILL frontmatter has only name and description", () => {
 
 test("OpenAI metadata stays outside portable frontmatter and preserves safety wording", () => {
   const yaml = readFileSync(join(skillRoot, "agents", "openai.yaml"), "utf8");
-  assert.match(yaml, /display_name: "Project Status"/);
+  assert.match(yaml, /display_name: "StatusGlance \/ Readiness"/);
   assert.match(yaml, /\$project-status/);
   assert.doesNotMatch(yaml, /publish/i);
   assert.match(yaml, /allow_implicit_invocation: true/);

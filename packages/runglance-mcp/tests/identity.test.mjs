@@ -15,7 +15,7 @@ test("RunGlance npm and MCP Registry identities agree", () => {
   const packageJson = json(join(packageRoot, "package.json"));
   const serverJson = json(join(projectRoot, "mcp-registry", "runglance", "server.json"));
   assert.equal(packageJson.name, "@openly-useful/runglance-mcp");
-  assert.equal(packageJson.version, "1.2.1");
+  assert.equal(packageJson.version, "1.3.0");
   assert.equal(packageJson.mcpName, "org.openlyuseful/runglance");
   assert.equal(serverJson.name, packageJson.mcpName);
   assert.equal(serverJson.version, packageJson.version);

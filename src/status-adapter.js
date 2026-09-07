@@ -1,6 +1,15 @@
 import { fallbackStatus } from "./status-fallback.js";
 import { normalizeActivity } from "./activity-model.js";
 
+export function evidenceLabel(status, loadState, now = Date.now()) {
+  if (loadState !== "loaded") return loadState === "loading" ? "Loading snapshot" : "Bundled snapshot";
+  if (!status.evidenceSummary?.total) return "No evidence";
+  const audit = status.audit ?? {};
+  if (status.evidenceSummary.stale || audit.verificationState !== "current"
+    || !audit.staleAt || !Number.isFinite(Date.parse(audit.staleAt)) || now > Date.parse(audit.staleAt)) return "Review needed";
+  return "Snapshot current";
+}
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -113,6 +122,7 @@ function normalizeCanonical(manifest, base) {
   const normalized = {
     ...base,
     schemaVersion: manifest.schemaVersion,
+    delivery: manifest.delivery ?? null,
     initiative: manifest.initiative?.name ?? base.initiative,
     initiativeState: manifest.initiative?.state ?? base.initiativeState,
     release: manifest.initiative?.release ?? base.release,

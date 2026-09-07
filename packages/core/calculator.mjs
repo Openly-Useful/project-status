@@ -1,4 +1,5 @@
 import { criticalPath } from "./graph.mjs";
+import { calculateDelivery } from "./delivery.mjs";
 import { EVIDENCE_TIER_RANK } from "./schema.mjs";
 import { resolveClock } from "./time.mjs";
 import { validateManifest } from "./validator.mjs";
@@ -93,6 +94,7 @@ export function calculateStatus(manifest, options = {}) {
 
   return Object.freeze({
     asOf: now.toISOString(),
+    delivery: calculateDelivery(manifest, now),
     score: Object.freeze({
       earnedWeight,
       totalWeight: manifest.totalWeight,

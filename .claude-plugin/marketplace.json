@@ -19,7 +19,7 @@
       "name": "project-status",
       "source": "./plugins/claude/project-status",
       "strict": true,
-      "version": "1.2.1"
+      "version": "1.3.0"
     },
     {
       "author": {
@@ -32,8 +32,8 @@
       "name": "runglance",
       "source": "./plugins/claude/runglance",
       "strict": true,
-      "version": "1.2.1"
+      "version": "1.3.0"
     }
   ],
-  "version": "1.2.1"
+  "version": "1.3.0"
 }

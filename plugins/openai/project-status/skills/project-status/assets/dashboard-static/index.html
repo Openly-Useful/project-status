@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
-    <title>Project status</title>
+    <title>StatusGlance / Readiness</title>
     <link rel="stylesheet" href="./status.css">
     <script type="module" src="./status.js"></script>
   </head>
@@ -22,6 +22,13 @@
           <span id="overall-fill"></span>
         </div>
       </header>
+
+      <section aria-labelledby="delivery-heading">
+        <div class="section-heading"><h2 id="delivery-heading">Delivery readiness</h2><p>Cumulative accepted scope; health remains separate.</p></div>
+        <div id="delivery-stages" class="phase-grid"></div>
+        <p id="delivery-next">Stage scope not configured.</p>
+        <details><summary>Acceptance gaps</summary><ul id="delivery-gaps"><li>Scope unknown.</li></ul></details>
+      </section>
 
       <section aria-labelledby="phase-heading">
         <div class="section-heading">

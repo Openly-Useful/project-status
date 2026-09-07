@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, statSync } from "node:fs";
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn, spawnSync } from "node:child_process";
@@ -14,6 +14,28 @@ const now = "2026-08-15T20:00:00.000Z";
 function fixture() {
   return mkdtempSync(join(tmpdir(), "runglance-runtime-"));
 }
+
+test("multiple sessions require explicit selection instead of the last global writer", () => {
+  const runtime = fixture();
+  for (const id of ["project-a", "project-b"]) assert.equal(run(runtime, ["start", "--session-id", id, "--now", now]).status, 0);
+  const ambiguous = run(runtime, ["snapshot", "--json", "--now", now]);
+  assert.notEqual(ambiguous.status, 0);
+  assert.match(ambiguous.stderr, /multiple.*--session-id/i);
+  const selected = run(runtime, ["snapshot", "--session-id", "project-a", "--json", "--now", now]);
+  assert.equal(selected.status, 0, selected.stderr);
+  assert.equal(JSON.parse(selected.stdout).sessionId, "project-a");
+});
+
+test("snapshot consumes persisted state without replaying or writing the event log", () => {
+  const runtime = fixture();
+  assert.equal(run(runtime, ["start", "--session-id", "cached", "--now", now]).status, 0);
+  const log = join(runtime, "sessions", "cached.jsonl");
+  writeFileSync(log, "not parsed during snapshot\n");
+  const before = statSync(log).mtimeMs;
+  const result = run(runtime, ["snapshot", "--session-id", "cached", "--json", "--now", now]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(statSync(log).mtimeMs, before);
+});
 
 function run(runtime, args, options = {}) {
   return spawnSync(process.execPath, [script, ...args], {
