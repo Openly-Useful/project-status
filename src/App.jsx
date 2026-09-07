@@ -33,7 +33,7 @@ import {
   WarningCircle,
   X,
 } from "@phosphor-icons/react";
-import { mergeStatus } from "./status-adapter.js";
+import { mergeStatus, evidenceLabel } from "./status-adapter.js";
 import { groupProgressPhases, workflowState } from "./progress-model.js";
 import { countLabel, formatDuration, metricLabel } from "./activity-model.js";
 
@@ -359,16 +359,16 @@ function AgentSwarm({ agents }) {
   );
 }
 
-function LiveActivitySummary({ activity, onOpen }) {
+function LiveActivitySummary({ activity, onOpen, onSetup }) {
   if (!activity.available) {
     return (
       <section className="live-summary live-summary--unavailable" aria-labelledby="live-summary-title">
         <div>
           <span className="panel-label">RunGlance HUD</span>
-          <h2 id="live-summary-title">RunGlance unavailable</h2>
-          <p>No RunGlance adapter is connected. The readiness manifest below remains available and is not being presented as live work.</p>
+          <h2 id="live-summary-title">No run events observed</h2>
+          <p>Connection is not verified. Readiness below is a separate snapshot, not live work. Setup instructions do not install or connect a host.</p>
         </div>
-        <button className="secondary-button" type="button" onClick={onOpen}>View RunGlance details <CaretRight size={17} aria-hidden="true" /></button>
+        <button className="secondary-button" type="button" onClick={onSetup}>View setup instructions <CaretRight size={17} aria-hidden="true" /></button>
       </section>
     );
   }
@@ -659,7 +659,7 @@ function SectionDialog({ section, status, onClose, onOpenSection }) {
       <section className="section-drawer">
         <header className="section-drawer__header">
           <div>
-            <span className="eyebrow">Project status / {definition?.label}</span>
+            <span className="eyebrow">StatusGlance / {definition?.label}</span>
             <h2 id="section-dialog-title">{definition?.label}</h2>
           </div>
           <button className="icon-button" type="button" onClick={onClose} aria-label={`Close ${definition?.label}`}>
@@ -834,6 +834,11 @@ function SectionContent({ section, status, onOpenSection }) {
         The skill works from files alone. Claude and Codex use the same SKILL.md and deterministic scripts; wrappers only supply discovery and presentation metadata.
       </Callout>
       <div className="install-grid">
+        <InstallCommand label="RunGlance setup plan (from this source checkout; read-only)" command="node skill/runglance/scripts/runglance.mjs setup plan --json" />
+        <InstallCommand label="Codex integration instructions (read-only; does not connect)" command="node skill/runglance/scripts/runglance.mjs setup instructions --host codex" />
+        <Callout icon={TerminalWindow} title="Installed skill versus source checkout">
+          These commands assume the StatusGlance source checkout. For an installed plugin, use its actual skill directory followed by scripts/runglance.mjs. Configuration, host installation, connection, and observed events are separate states; none is verified by copying a command. For task-scoped MCP reads, set RUNGLANCE_ACTIVITY_FILE to the intended session snapshot.
+        </Callout>
         <InstallCommand
           label="Repository attachment"
           command="node skill/project-status/scripts/attach.mjs apply . --mode symlink"
@@ -1047,10 +1052,13 @@ export function App() {
   const scoreSummary = overallSummary(counts, status.score.exactPercent ?? status.score.displayPercent);
   const latestAudit = status.audit.verifiedAt ?? status.evidenceSummary.latestVerifiedAt;
   const auditVerificationState = status.audit.verificationState ?? status.audit.state ?? "unknown";
-  const auditMetric = !latestAudit
-    ? "No audit"
-    : auditVerificationState === "current" ? "Manifest current"
-      : auditVerificationState === "proposal" ? "Proposal snapshot" : "Review needed";
+  const evidenceMetric = evidenceLabel(status, loadState);
+  const delivery = status.delivery;
+  const deliveryStages = delivery?.stages ?? ["Alpha", "Beta", "Live launch"].map(name => ({ id: name, name, percent: null, remainingTasks: null, remainingMilestones: null }));
+  const auditMetric = !latestAudit ? "No audit"
+    : loadState !== "loaded" ? "Bundled audit"
+      : evidenceMetric === "Snapshot current" ? "Snapshot current"
+        : auditVerificationState === "proposal" ? "Proposal snapshot" : "Review needed";
   const hasMonitorRun = Boolean(status.monitoring.lastScheduledAt);
   const monitorMetric = hasMonitorRun ? titleCase(status.monitoring.state) : "Setup needed";
   const monitorTone = !hasMonitorRun
@@ -1061,8 +1069,8 @@ export function App() {
   return (
     <div className={`app-shell ${collapsed ? "app-shell--collapsed" : ""}`}>
       <a className="skip-link" href="#main-content">Skip to status snapshot</a>
-      <aside className="sidebar" aria-label="Project status navigation">
-        <div className="brand-mark" role="img" aria-label="Project Status Initiative"><Cube size={31} weight="duotone" aria-hidden="true" /></div>
+      <aside className="sidebar" aria-label="StatusGlance navigation">
+        <div className="brand-mark" role="img" aria-label="StatusGlance"><Cube size={31} weight="duotone" aria-hidden="true" /></div>
         <nav>
           <button className={`nav-item ${activeSection ? "" : "nav-item--active"}`} type="button" onClick={closeSection} title="Home" aria-current={activeSection ? undefined : "page"}>
             <House size={22} weight="fill" aria-hidden="true" /><span>Home</span>
@@ -1080,7 +1088,7 @@ export function App() {
 
       <div className="workspace">
         <header className="topbar">
-          <div className="breadcrumb"><strong>Project Status Initiative</strong><span>/</span><em>Home</em></div>
+          <div className="breadcrumb"><strong>StatusGlance</strong><span>/</span><em>Home</em></div>
           <div className="topbar__actions">
             <button className="environment-button" type="button" onClick={() => openSection("readiness")} title="Open readiness state"><span /> {titleCase(status.initiativeState)} <CaretRight size={15} aria-hidden="true" /></button>
             <button className="search-button" type="button" onClick={openPalette} aria-label="Search or run a command">
@@ -1094,7 +1102,7 @@ export function App() {
         </header>
 
         <section className="home-truth-line" aria-label="Snapshot freshness">
-          <span><CheckCircle size={19} weight="fill" aria-hidden="true" /> Manifest evidence {status.evidenceSummary.stale === 0 ? "current" : "stale"}</span>
+          <span><CheckCircle size={19} weight="fill" aria-hidden="true" /> {evidenceMetric}</span>
           <i />
           <span>{sourceBound ? "source bound" : "source local"}</span>
           <i />
@@ -1104,7 +1112,21 @@ export function App() {
         </section>
 
         <main id="main-content" className="dashboard">
-          <LiveActivitySummary activity={status.liveActivity} onOpen={() => openSection("progress")} />
+          <LiveActivitySummary activity={status.liveActivity} onOpen={() => openSection("progress")} onSetup={() => openSection("install")} />
+
+          <section className="delivery-readiness" aria-labelledby="delivery-readiness-title">
+            <h2 id="delivery-readiness-title">Delivery readiness</h2>
+            <p>{delivery ? `Cumulative accepted scope · evidence as of ${dateTime(delivery.evidenceAsOf)}. Health is observed separately.` : "Stage scope not configured; percentages and remaining work unknown. Health is observed separately."}</p>
+            <div className="delivery-stages">
+              {deliveryStages.map(stage => <article key={stage.id}>
+                <header><strong>{stage.name}</strong><span>{stage.displayPercent ?? "—"} / 100</span></header>
+                {stage.percent === null ? <p>Scope unknown</p> : <progress max="100" value={stage.percent} aria-label={`${stage.name} acceptance`} />}
+                <small>Remaining: {stage.remainingMilestones ?? "—"} milestones · {stage.remainingTasks ?? "—"} tasks</small>
+              </article>)}
+            </div>
+            <p><strong>Next integrated milestone:</strong> {delivery?.nextMilestone ? `${delivery.nextMilestone.name} · ${delivery.nextMilestone.remainingTasks} tasks remaining` : "Not declared"}</p>
+            {delivery?.gaps?.length ? <details><summary>Acceptance gaps ({delivery.gaps.length})</summary><ul>{delivery.gaps.map(gap => <li key={gap.id}><strong>{gap.name}</strong> → {gap.owner.label} → {gap.nextAction}</li>)}</ul></details> : null}
+          </section>
 
           <section className="overall-status" aria-labelledby="overall-status-title">
             <div className="overall-status__heading">
@@ -1145,9 +1167,9 @@ export function App() {
 
           <section className="summary-grid" aria-label="Status sections">
             <SummaryTile icon={ShieldCheck} title="Readiness" metric={`${status.phases.length} phases`} description="Weighted plan and dependencies." onOpen={() => openSection("readiness")} />
-            <SummaryTile icon={ClipboardText} title="Evidence" metric={status.evidenceSummary.stale ? "Review needed" : "Fresh"} description={`Verified ${dateTime(status.evidenceSummary.latestVerifiedAt)}.`} onOpen={() => openSection("evidence")} state={status.evidenceSummary.stale ? "stale" : "verified"} />
+            <SummaryTile icon={ClipboardText} title="Evidence" metric={evidenceMetric} description={`Recorded ${dateTime(status.evidenceSummary.latestVerifiedAt)}; no live recheck.`} onOpen={() => openSection("evidence")} state={evidenceMetric === "Snapshot current" ? "verified" : "stale"} />
             <SummaryTile icon={Heartbeat} title="Monitoring" metric={monitorMetric} description="Operational checks and alerting." onOpen={() => openSection("monitoring")} state={monitorTone} />
-            <SummaryTile icon={PlayCircle} title="Runs" metric={auditMetric} description={latestAudit ? `Weighted snapshot ${dateTime(latestAudit)}.` : "No weighted audit timestamp."} onOpen={() => openSection("runs")} state={auditVerificationState === "current" ? "verified" : "stale"} />
+            <SummaryTile icon={PlayCircle} title="Runs" metric={auditMetric} description={latestAudit ? `Weighted snapshot ${dateTime(latestAudit)}.` : "No weighted audit timestamp."} onOpen={() => openSection("runs")} state={auditMetric === "Snapshot current" ? "verified" : "stale"} />
             <SummaryTile icon={Octagon} title="Blockers" metric={`${status.blockers.length} owner action${status.blockers.length === 1 ? "" : "s"}`} description={status.blockers[0]?.name ?? "No active blocker."} onOpen={() => openSection("blockers")} state={status.blockers.length ? "blocked" : "healthy"} />
             <SummaryTile icon={Database} title="Packages" metric={`${status.packages.filter((item) => item.id !== "mcp").length} targets`} description="Portable skill and host wrappers." onOpen={() => openSection("source")} state={sourceBound ? "verified" : "unknown"} />
           </section>

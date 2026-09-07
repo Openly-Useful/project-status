@@ -11,7 +11,7 @@ test("dashboard polls the optional activity endpoint with active and unavailable
   assert.match(appSource, /return activity \? 5000 : 15000/);
   assert.match(appSource, /error\?\.status === 503/);
   assert.match(appSource, /RunGlance unavailable/);
-  assert.match(appSource, /The readiness manifest below remains available and is not being presented as live work/);
+  assert.match(appSource, /Readiness below is a separate snapshot, not live work/);
 });
 
 test("expanded activity view accounts for running, finished, and swarm work without manifest substitution", () => {

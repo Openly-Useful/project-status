@@ -1,6 +1,6 @@
 interface:
-  display_name: "RunGlance"
+  display_name: "StatusGlance / RunGlance"
   short_description: "Live progress and verified run outcomes"
-  default_prompt: "Use $runglance to show a low-overhead RunGlance HUD for this task and finish with an evidence-honest verification receipt."
+  default_prompt: "Use $runglance to read one existing task snapshot: active lanes, concrete results, measured or unknown progress, blockers, and next milestone. Do not start, watch, verify, finish, or configure a run for this status request."
 policy:
   allow_implicit_invocation: true

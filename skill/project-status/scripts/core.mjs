@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { calculateDelivery, validateDelivery } from "./delivery.mjs";
 import {
   existsSync,
   lstatSync,
@@ -342,6 +343,7 @@ function detectCycles(collector, taskIds, dependencies) {
 
 function semanticValidation(collector, manifest, options) {
   if (!isRecord(manifest)) return;
+  for (const error of validateDelivery(manifest)) collector.add(error.code, error.path, error.message);
   validateRoute(collector, manifest.route);
 
   const phaseIds = new Map();
@@ -639,6 +641,7 @@ function calculateStatusUnchecked(manifest, options = {}) {
   };
   return Object.freeze({
     asOf: now.toISOString(),
+    delivery: calculateDelivery(manifest, now),
     score: Object.freeze({ earnedWeight, totalWeight: manifest.totalWeight, exactPercent: (earnedWeight / manifest.totalWeight) * 100, displayPercent: Math.round((earnedWeight / manifest.totalWeight) * 100) }),
     phases: Object.freeze(phases),
     tasks: Object.freeze({ total: tasks.length, complete: tasks.filter((task) => task.status === "complete").length, inProgress: tasks.filter((task) => task.status === "in_progress").length, blocked: tasks.filter((task) => task.status === "blocked").length, notStarted: tasks.filter((task) => task.status === "not_started").length }),
@@ -787,6 +790,7 @@ export function createPublicProjection(manifest, validationOrOptions = {}, maybe
     audit: { ...manifest.audit, asOf: status.asOf, verificationState: status.audit.verificationState, staleAt },
     manifestFreshness: { basis: "manifest_snapshot", state: status.audit.verificationState, asOf: status.asOf, evidenceAsOf: manifest.audit.evidenceAsOf, verifiedAt: manifest.audit.verifiedAt, staleAt, ageSeconds: status.audit.ageSeconds, isStale: status.audit.isStale },
     score: { ...status.score },
+    delivery: status.delivery,
     readiness: { exact: status.score.exactPercent, displayed: status.score.displayPercent, denominator: status.score.totalWeight },
     phases: manifest.phases.map((phase) => {
       const phaseStatus = status.phases.find((item) => item.id === phase.id);

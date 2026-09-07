@@ -116,7 +116,8 @@ function getNested(input, paths) {
 
 function appServerItemKind(item) {
   const type = String(item?.type ?? "").toLowerCase();
-  if (type.includes("agent") || type.includes("collab")) return "agent";
+  if (["agentmessage", "usermessage", "reasoning", "plan"].includes(type)) return null;
+  // Collaboration calls are tools, not child-agent lifecycle evidence.
   if (type.includes("tool") || type.includes("command") || type.includes("search")) return "tool";
   return "tool";
 }
@@ -144,14 +145,19 @@ function mapCodexAppServer(input) {
   }
   if (["item/started", "item/completed"].includes(method)) {
     const item = params.item ?? {};
+    const kind = appServerItemKind(item);
+    if (kind === null) return [];
     const id = string(item.id ?? params.itemId ?? params.item_id);
     if (!id) throw new Error(`${method} requires an item ID`);
-    const state = method === "item/started" ? "running" : normalizeState(item.status ?? params.status, "completed");
+    const exitCode = item.exitCode ?? item.exit_code;
+    const failedCommand = method === "item/completed" && String(item.type).toLowerCase() === "commandexecution"
+      && Number.isInteger(exitCode) && exitCode !== 0;
+    const state = failedCommand ? "failed" : method === "item/started" ? "running" : normalizeState(item.status ?? params.status, "completed");
     return [{
       sessionId: threadId,
       type: lifecycleType(state, { initial: method === "item/started" }),
       source: "codex-app-server",
-      entity: { kind: appServerItemKind(item), id, name: string(item.name ?? item.type, "Work item"), parentId: string(params.turnId ?? params.turn_id) },
+      entity: { kind, id, name: string(item.name ?? item.type, "Work item"), parentId: string(params.turnId ?? params.turn_id) },
       state,
     }];
   }

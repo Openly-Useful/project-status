@@ -1,15 +1,1559 @@
 #!/usr/bin/env node
 var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
+// ../core/canonical.mjs
+function assertJsonValue(value, path, stack) {
+  if (value === null || typeof value === "string" || typeof value === "boolean") return;
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) throw new TypeError(`${path} must be a finite JSON number`);
+    return;
+  }
+  if (typeof value !== "object") {
+    throw new TypeError(`${path} contains a non-JSON ${typeof value} value`);
+  }
+  if (stack.has(value)) throw new TypeError(`${path} contains a circular reference`);
+  stack.add(value);
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      if (!(index in value)) throw new TypeError(`${path}[${index}] is a sparse array entry`);
+      assertJsonValue(value[index], `${path}[${index}]`, stack);
+    }
+  } else {
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) {
+      throw new TypeError(`${path} must be a plain JSON object`);
+    }
+    if (Object.getOwnPropertySymbols(value).length > 0) {
+      throw new TypeError(`${path} contains symbol keys`);
+    }
+    for (const key of Object.keys(value)) {
+      assertJsonValue(value[key], `${path}.${key}`, stack);
+    }
+  }
+  stack.delete(value);
+}
+function serialize(value) {
+  if (value === null) return "null";
+  if (typeof value === "string" || typeof value === "boolean" || typeof value === "number") {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) return `[${value.map(serialize).join(",")}]`;
+  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${serialize(value[key])}`).join(",")}}`;
+}
+function canonicalize(value) {
+  assertJsonValue(value, "$", /* @__PURE__ */ new WeakSet());
+  return serialize(value);
+}
+function rotateRight(value, bits) {
+  return value >>> bits | value << 32 - bits;
+}
+function sha256(value) {
+  const bytes = new TextEncoder().encode(canonicalize(value));
+  const paddedLength = Math.ceil((bytes.length + 9) / 64) * 64;
+  const padded = new Uint8Array(paddedLength);
+  padded.set(bytes);
+  padded[bytes.length] = 128;
+  const bitLength = bytes.length * 8;
+  const view = new DataView(padded.buffer);
+  view.setUint32(paddedLength - 8, Math.floor(bitLength / 4294967296), false);
+  view.setUint32(paddedLength - 4, bitLength >>> 0, false);
+  const hash = new Uint32Array([
+    1779033703,
+    3144134277,
+    1013904242,
+    2773480762,
+    1359893119,
+    2600822924,
+    528734635,
+    1541459225
+  ]);
+  const words = new Uint32Array(64);
+  for (let offset = 0; offset < paddedLength; offset += 64) {
+    for (let index = 0; index < 16; index += 1) {
+      words[index] = view.getUint32(offset + index * 4, false);
+    }
+    for (let index = 16; index < 64; index += 1) {
+      const first = words[index - 15];
+      const second = words[index - 2];
+      const sigma0 = rotateRight(first, 7) ^ rotateRight(first, 18) ^ first >>> 3;
+      const sigma1 = rotateRight(second, 17) ^ rotateRight(second, 19) ^ second >>> 10;
+      words[index] = words[index - 16] + sigma0 + words[index - 7] + sigma1 >>> 0;
+    }
+    let [a, b, c, d, e, f, g, h] = hash;
+    for (let index = 0; index < 64; index += 1) {
+      const sum1 = rotateRight(e, 6) ^ rotateRight(e, 11) ^ rotateRight(e, 25);
+      const choice = e & f ^ ~e & g;
+      const temporary1 = h + sum1 + choice + SHA256_CONSTANTS[index] + words[index] >>> 0;
+      const sum0 = rotateRight(a, 2) ^ rotateRight(a, 13) ^ rotateRight(a, 22);
+      const majority = a & b ^ a & c ^ b & c;
+      const temporary2 = sum0 + majority >>> 0;
+      h = g;
+      g = f;
+      f = e;
+      e = d + temporary1 >>> 0;
+      d = c;
+      c = b;
+      b = a;
+      a = temporary1 + temporary2 >>> 0;
+    }
+    hash[0] = hash[0] + a >>> 0;
+    hash[1] = hash[1] + b >>> 0;
+    hash[2] = hash[2] + c >>> 0;
+    hash[3] = hash[3] + d >>> 0;
+    hash[4] = hash[4] + e >>> 0;
+    hash[5] = hash[5] + f >>> 0;
+    hash[6] = hash[6] + g >>> 0;
+    hash[7] = hash[7] + h >>> 0;
+  }
+  return [...hash].map((word) => word.toString(16).padStart(8, "0")).join("");
+}
+var SHA256_CONSTANTS;
+var init_canonical = __esm({
+  "../core/canonical.mjs"() {
+    SHA256_CONSTANTS = new Uint32Array([
+      1116352408,
+      1899447441,
+      3049323471,
+      3921009573,
+      961987163,
+      1508970993,
+      2453635748,
+      2870763221,
+      3624381080,
+      310598401,
+      607225278,
+      1426881987,
+      1925078388,
+      2162078206,
+      2614888103,
+      3248222580,
+      3835390401,
+      4022224774,
+      264347078,
+      604807628,
+      770255983,
+      1249150122,
+      1555081692,
+      1996064986,
+      2554220882,
+      2821834349,
+      2952996808,
+      3210313671,
+      3336571891,
+      3584528711,
+      113926993,
+      338241895,
+      666307205,
+      773529912,
+      1294757372,
+      1396182291,
+      1695183700,
+      1986661051,
+      2177026350,
+      2456956037,
+      2730485921,
+      2820302411,
+      3259730800,
+      3345764771,
+      3516065817,
+      3600352804,
+      4094571909,
+      275423344,
+      430227734,
+      506948616,
+      659060556,
+      883997877,
+      958139571,
+      1322822218,
+      1537002063,
+      1747873779,
+      1955562222,
+      2024104815,
+      2227730452,
+      2361852424,
+      2428436474,
+      2756734187,
+      3204031479,
+      3329325298
+    ]);
+  }
+});
+
+// ../core/delivery.mjs
+function validateDelivery(manifest) {
+  if (!Object.hasOwn(manifest, "delivery")) return [];
+  const errors = [];
+  const add = (path, message) => errors.push({ code: "invalid_delivery", path, message });
+  function shape(value, schema, path) {
+    if (schema.anyOf) return value === null ? void 0 : shape(value, schema.anyOf[0], path);
+    if (Object.hasOwn(schema, "const")) {
+      if (value !== schema.const) add(path, `must equal ${schema.const}`);
+    } else if (schema.type === "object") {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return add(path, "must be an object");
+      for (const key of Object.keys(value)) if (!Object.hasOwn(schema.properties, key)) add(`${path}.${key}`, "is not allowed");
+      for (const [key, child] of Object.entries(schema.properties)) shape(value[key], child, `${path}.${key}`);
+    } else if (schema.type === "array") {
+      if (!Array.isArray(value)) return add(path, "must be an array");
+      if (value.length < (schema.minItems ?? 0)) add(path, "does not contain enough items");
+      if (schema.uniqueItems && new Set(value).size !== value.length) add(path, "contains duplicate references");
+      value.forEach((item, index) => shape(item, schema.items, `${path}[${index}]`));
+    } else if (schema.type === "string") {
+      if (typeof value !== "string" || !value.trim() || schema.pattern && !new RegExp(schema.pattern).test(value)) add(path, "must be a valid nonempty string");
+    }
+  }
+  shape(manifest.delivery, DELIVERY_SCHEMA, "$.delivery");
+  if (errors.length) return errors;
+  const d = manifest.delivery;
+  const tasks = new Set((Array.isArray(manifest.phases) ? manifest.phases : []).flatMap((p) => Array.isArray(p?.tasks) ? p.tasks : []).map((t) => t?.id));
+  const milestones = new Map(d.milestones.map((m) => [m.id, m]));
+  const stages = new Set(d.stages.map((s) => s.id));
+  if (stages.size !== d.stages.length) add("$.delivery.stages", "stage IDs must be unique");
+  if (milestones.size !== d.milestones.length) add("$.delivery.milestones", "milestone IDs must be unique");
+  if (!stages.has(d.activeStage)) add("$.delivery.activeStage", "must reference a configured stage");
+  if (d.nextMilestoneId !== null && !milestones.has(d.nextMilestoneId)) add("$.delivery.nextMilestoneId", "must reference a configured milestone");
+  d.milestones.forEach((m, i) => {
+    for (const ref of m.taskRefs) if (!tasks.has(ref)) add(`$.delivery.milestones[${i}].taskRefs`, `unknown task: ${ref}`);
+  });
+  const cumulativeTasks = /* @__PURE__ */ new Set();
+  d.stages.forEach((stage, i) => {
+    for (const ref of stage.taskRefs) {
+      cumulativeTasks.add(ref);
+      if (!tasks.has(ref)) add(`$.delivery.stages[${i}].taskRefs`, `unknown task: ${ref}`);
+    }
+    for (const ref of stage.milestoneRefs) {
+      const milestone = milestones.get(ref);
+      if (!milestone) add(`$.delivery.stages[${i}].milestoneRefs`, `unknown milestone: ${ref}`);
+      else if (milestone.taskRefs.some((task) => !cumulativeTasks.has(task))) add(`$.delivery.stages[${i}].milestoneRefs`, "milestone tasks must be included in this cumulative stage scope");
+    }
+  });
+  return errors;
+}
+function calculateDelivery(manifest, now) {
+  if (!manifest.delivery) return null;
+  const time3 = new Date(now).getTime();
+  const rank = { assertion: 1, prepared: 2, validated_local: 3, public_reproducible: 4, direct: 5 };
+  const tasks = new Map(manifest.phases.flatMap((p) => p.tasks).map((t) => [t.id, t]));
+  const evidence = new Map(manifest.evidence.map((e) => [e.id, e]));
+  const gates = new Map(manifest.gates.map((g) => [g.id, g]));
+  const accepted = /* @__PURE__ */ new Set();
+  for (const task of tasks.values()) {
+    const qualifying = task.evidenceRefs.filter((ref) => {
+      const e = evidence.get(ref);
+      return e && e.state === "current" && rank[e.tier] >= rank[task.evidenceRequirement.minimumTier] && Date.parse(e.capturedAt) <= time3 && e.verifiedAt !== null && Date.parse(e.verifiedAt) <= time3 && (e.expiresAt === null || Date.parse(e.expiresAt) > time3);
+    });
+    if (task.status === "complete" && qualifying.length >= task.evidenceRequirement.minCount && task.gateRefs.every((ref) => ["satisfied", "waived"].includes(gates.get(ref)?.status))) accepted.add(task.id);
+  }
+  const summarize = (taskRefs) => {
+    const ids = [...new Set(taskRefs)];
+    const totalWeight = ids.reduce((sum, ref) => sum + tasks.get(ref).weight, 0);
+    const acceptedWeight = ids.reduce((sum, ref) => sum + (accepted.has(ref) ? tasks.get(ref).weight : 0), 0);
+    return {
+      totalTasks: ids.length,
+      acceptedTasks: ids.filter((ref) => accepted.has(ref)).length,
+      remainingTasks: ids.length ? ids.filter((ref) => !accepted.has(ref)).length : null,
+      totalWeight,
+      acceptedWeight,
+      percent: totalWeight ? acceptedWeight / totalWeight * 100 : null,
+      displayPercent: totalWeight ? ids.every((ref) => accepted.has(ref)) ? 100 : Math.min(99, Math.round(acceptedWeight / totalWeight * 100)) : null
+    };
+  };
+  const milestones = new Map(manifest.delivery.milestones.map((m) => [m.id, { id: m.id, name: m.name, ...summarize(m.taskRefs) }]));
+  const cumulativeTasks = /* @__PURE__ */ new Set();
+  const cumulativeMilestones = /* @__PURE__ */ new Set();
+  const stages = manifest.delivery.stages.map((stage) => {
+    stage.taskRefs.forEach((ref) => cumulativeTasks.add(ref));
+    stage.milestoneRefs.forEach((ref) => cumulativeMilestones.add(ref));
+    return {
+      id: stage.id,
+      name: stage.name,
+      ...summarize(cumulativeTasks),
+      totalMilestones: cumulativeMilestones.size,
+      remainingMilestones: [...cumulativeMilestones].filter((ref) => milestones.get(ref).remainingTasks !== 0).length
+    };
+  });
+  const gaps = [...cumulativeTasks].filter((ref) => !accepted.has(ref)).map((ref) => {
+    const task = tasks.get(ref);
+    return {
+      id: task.id,
+      name: task.name,
+      state: task.status,
+      owner: { type: task.owner.type, label: task.owner.label },
+      nextAction: task.nextAction ?? (task.status === "complete" ? "Revalidate acceptance evidence and gates." : "Define the next acceptance action."),
+      reason: task.status === "complete" ? "acceptance_evidence_or_gate" : "not_accepted"
+    };
+  });
+  return {
+    schemaVersion: 1,
+    basis: "current_accepted_task_weight",
+    evidenceAsOf: manifest.audit.evidenceAsOf,
+    activeStage: manifest.delivery.activeStage,
+    stages,
+    nextMilestone: milestones.get(manifest.delivery.nextMilestoneId) ?? null,
+    gaps
+  };
+}
+var id, refs, text, object2, DELIVERY_SCHEMA;
+var init_delivery = __esm({
+  "../core/delivery.mjs"() {
+    id = { type: "string", pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" };
+    refs = { type: "array", uniqueItems: true, items: id };
+    text = { type: "string", minLength: 1 };
+    object2 = (properties) => ({ type: "object", additionalProperties: false, required: Object.keys(properties), properties });
+    DELIVERY_SCHEMA = object2({
+      schemaVersion: { const: 1 },
+      activeStage: id,
+      nextMilestoneId: { anyOf: [id, { type: "null" }] },
+      stages: { type: "array", minItems: 1, items: object2({ id, name: text, taskRefs: refs, milestoneRefs: refs }) },
+      milestones: { type: "array", items: object2({ id, name: text, taskRefs: { ...refs, minItems: 1 } }) }
+    });
+  }
+});
+
+// ../core/schema.mjs
+function strictObject(required2, properties) {
+  return { type: "object", additionalProperties: false, required: required2, properties };
+}
+var TASK_STATUSES, INITIATIVE_STATES, AUDIT_STATES, EVIDENCE_KINDS, EVIDENCE_TIERS, EVIDENCE_STATES, VISIBILITIES, LOCATOR_TYPES, VERIFIER_TYPES, OWNER_TYPES, GATE_TYPES, GATE_STATUSES, WAIT_KINDS, DEPENDENCY_TYPES, EVIDENCE_TIER_RANK, ID_SCHEMA, TEXT_SCHEMA, TIME_SCHEMA, SHA_SCHEMA, ROUTE_SCHEMA, NULLABLE_TIME_SCHEMA, NULLABLE_TEXT_SCHEMA, NULLABLE_RANGE_SCHEMA, MANIFEST_SCHEMA;
+var init_schema = __esm({
+  "../core/schema.mjs"() {
+    init_delivery();
+    TASK_STATUSES = Object.freeze(["complete", "in_progress", "blocked", "not_started"]);
+    INITIATIVE_STATES = Object.freeze(["proposal", "active", "complete", "superseded"]);
+    AUDIT_STATES = Object.freeze(["proposal", "current", "stale", "superseded"]);
+    EVIDENCE_KINDS = Object.freeze(["audit_finding", "artifact", "deliverable", "test_result", "external_assertion"]);
+    EVIDENCE_TIERS = Object.freeze(["assertion", "prepared", "validated_local", "public_reproducible", "direct"]);
+    EVIDENCE_STATES = Object.freeze(["current", "stale", "revoked", "unverified"]);
+    VISIBILITIES = Object.freeze(["public", "internal", "restricted"]);
+    LOCATOR_TYPES = Object.freeze(["url", "file", "conversation", "commit", "artifact"]);
+    VERIFIER_TYPES = Object.freeze(["agent", "person", "automation"]);
+    OWNER_TYPES = Object.freeze(["role", "person", "agent", "automation"]);
+    GATE_TYPES = Object.freeze(["provenance", "infrastructure", "deployment", "owner_action", "external_approval", "policy_decision", "security", "evidence"]);
+    GATE_STATUSES = Object.freeze(["satisfied", "unsatisfied", "waiting", "waived"]);
+    WAIT_KINDS = Object.freeze(["unknown", "business_days", "duration_hours"]);
+    DEPENDENCY_TYPES = Object.freeze(["blocks", "informs"]);
+    EVIDENCE_TIER_RANK = Object.freeze({
+      assertion: 1,
+      prepared: 2,
+      validated_local: 3,
+      public_reproducible: 4,
+      direct: 5
+    });
+    ID_SCHEMA = { type: "string", pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" };
+    TEXT_SCHEMA = { type: "string", minLength: 1 };
+    TIME_SCHEMA = { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$", format: "date-time" };
+    SHA_SCHEMA = { type: "string", pattern: "^[a-f0-9]{64}$" };
+    ROUTE_SCHEMA = { type: "string", pattern: "^/(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*[?#\\\\])[A-Za-z0-9._~!$&'()*+,;=:@%/-]*$" };
+    NULLABLE_TIME_SCHEMA = { anyOf: [TIME_SCHEMA, { type: "null" }] };
+    NULLABLE_TEXT_SCHEMA = { anyOf: [TEXT_SCHEMA, { type: "null" }] };
+    NULLABLE_RANGE_SCHEMA = { anyOf: [{ $ref: "#/$defs/range" }, { type: "null" }] };
+    MANIFEST_SCHEMA = Object.freeze({
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      $id: "https://project-status.invalid/schema/manifest-v1.json",
+      title: "Project Status Initiative Manifest",
+      type: "object",
+      additionalProperties: false,
+      required: ["schemaVersion", "route", "initiative", "source", "audit", "totalWeight", "phases", "evidence", "gates", "dependencies"],
+      properties: {
+        schemaVersion: { const: 1 },
+        delivery: DELIVERY_SCHEMA,
+        route: ROUTE_SCHEMA,
+        initiative: { $ref: "#/$defs/initiative" },
+        source: { $ref: "#/$defs/source" },
+        audit: { $ref: "#/$defs/audit" },
+        totalWeight: { const: 100 },
+        phases: { type: "array", minItems: 1, items: { $ref: "#/$defs/phase" } },
+        evidence: { type: "array", items: { $ref: "#/$defs/evidence" } },
+        gates: { type: "array", items: { $ref: "#/$defs/gate" } },
+        dependencies: { type: "array", items: { $ref: "#/$defs/dependency" } }
+      },
+      $defs: {
+        initiative: strictObject(["id", "name", "release", "state"], {
+          id: ID_SCHEMA,
+          name: TEXT_SCHEMA,
+          release: TEXT_SCHEMA,
+          state: { enum: INITIATIVE_STATES }
+        }),
+        source: strictObject(["repository", "commit", "deploymentId", "buildId", "manifestSha256"], {
+          repository: { anyOf: [{ type: "string", pattern: "^https://" }, { type: "null" }] },
+          commit: { anyOf: [{ type: "string", pattern: "^[a-f0-9]{40}$" }, { type: "null" }] },
+          deploymentId: NULLABLE_TEXT_SCHEMA,
+          buildId: NULLABLE_TEXT_SCHEMA,
+          manifestSha256: { anyOf: [SHA_SCHEMA, { type: "null" }] }
+        }),
+        audit: strictObject(["auditId", "state", "evidenceAsOf", "verifiedAt", "nextDueAt", "staleAfterSeconds"], {
+          auditId: ID_SCHEMA,
+          state: { enum: AUDIT_STATES },
+          evidenceAsOf: TIME_SCHEMA,
+          verifiedAt: NULLABLE_TIME_SCHEMA,
+          nextDueAt: NULLABLE_TIME_SCHEMA,
+          staleAfterSeconds: { type: "integer", minimum: 1 }
+        }),
+        owner: strictObject(["type", "id", "label"], {
+          type: { enum: OWNER_TYPES },
+          id: ID_SCHEMA,
+          label: TEXT_SCHEMA
+        }),
+        range: strictObject(["min", "max"], {
+          min: { type: "number", minimum: 0 },
+          max: { type: "number", minimum: 0 }
+        }),
+        evidenceRequirement: strictObject(["minimumTier", "minCount"], {
+          minimumTier: { enum: EVIDENCE_TIERS },
+          minCount: { type: "integer", minimum: 1 }
+        }),
+        task: strictObject(
+          ["id", "name", "summary", "status", "weight", "earnedWeight", "remainingHours", "recurring", "deferred", "owner", "nextAction", "evidenceRequirement", "evidenceRefs", "gateRefs"],
+          {
+            id: ID_SCHEMA,
+            name: TEXT_SCHEMA,
+            summary: TEXT_SCHEMA,
+            status: { enum: TASK_STATUSES },
+            weight: { type: "number", exclusiveMinimum: 0 },
+            earnedWeight: { type: "number", minimum: 0 },
+            remainingHours: NULLABLE_RANGE_SCHEMA,
+            recurring: { type: "boolean" },
+            deferred: { type: "boolean" },
+            owner: { $ref: "#/$defs/owner" },
+            nextAction: NULLABLE_TEXT_SCHEMA,
+            evidenceRequirement: { $ref: "#/$defs/evidenceRequirement" },
+            evidenceRefs: { type: "array", uniqueItems: true, items: ID_SCHEMA },
+            gateRefs: { type: "array", uniqueItems: true, items: ID_SCHEMA }
+          }
+        ),
+        phase: strictObject(["id", "name", "summary", "weight", "tasks"], {
+          id: ID_SCHEMA,
+          name: TEXT_SCHEMA,
+          summary: TEXT_SCHEMA,
+          weight: { type: "number", exclusiveMinimum: 0 },
+          tasks: { type: "array", minItems: 1, items: { $ref: "#/$defs/task" } }
+        }),
+        urlLocator: strictObject(["type", "url"], {
+          type: { const: "url" },
+          url: { type: "string", pattern: "^https://" }
+        }),
+        fileLocator: strictObject(["type", "path"], {
+          type: { const: "file" },
+          path: { type: "string", pattern: "^/" }
+        }),
+        conversationLocator: strictObject(["type", "reference"], {
+          type: { const: "conversation" },
+          reference: TEXT_SCHEMA
+        }),
+        commitLocator: strictObject(["type", "repository", "commit"], {
+          type: { const: "commit" },
+          repository: { type: "string", pattern: "^https://" },
+          commit: { type: "string", pattern: "^[a-f0-9]{40}$" }
+        }),
+        artifactLocator: strictObject(["type", "name", "digest"], {
+          type: { const: "artifact" },
+          name: TEXT_SCHEMA,
+          digest: SHA_SCHEMA
+        }),
+        locator: {
+          oneOf: [
+            { $ref: "#/$defs/urlLocator" },
+            { $ref: "#/$defs/fileLocator" },
+            { $ref: "#/$defs/conversationLocator" },
+            { $ref: "#/$defs/commitLocator" },
+            { $ref: "#/$defs/artifactLocator" }
+          ]
+        },
+        integrity: strictObject(["algorithm", "digest"], {
+          algorithm: { const: "sha256" },
+          digest: SHA_SCHEMA
+        }),
+        verifier: strictObject(["type", "id", "label"], {
+          type: { enum: VERIFIER_TYPES },
+          id: ID_SCHEMA,
+          label: TEXT_SCHEMA
+        }),
+        evidence: strictObject(
+          ["id", "kind", "tier", "state", "visibility", "assertion", "publicSummary", "capturedAt", "verifiedAt", "expiresAt", "locator", "integrity", "verifier"],
+          {
+            id: ID_SCHEMA,
+            kind: { enum: EVIDENCE_KINDS },
+            tier: { enum: EVIDENCE_TIERS },
+            state: { enum: EVIDENCE_STATES },
+            visibility: { enum: VISIBILITIES },
+            assertion: TEXT_SCHEMA,
+            publicSummary: TEXT_SCHEMA,
+            capturedAt: TIME_SCHEMA,
+            verifiedAt: TIME_SCHEMA,
+            expiresAt: NULLABLE_TIME_SCHEMA,
+            locator: { $ref: "#/$defs/locator" },
+            integrity: { anyOf: [{ $ref: "#/$defs/integrity" }, { type: "null" }] },
+            verifier: { $ref: "#/$defs/verifier" }
+          }
+        ),
+        unknownWait: strictObject(["kind", "label"], { kind: { const: "unknown" }, label: TEXT_SCHEMA }),
+        rangedWait: strictObject(["kind", "label", "min", "max"], {
+          kind: { enum: ["business_days", "duration_hours"] },
+          label: TEXT_SCHEMA,
+          min: { type: "number", minimum: 0 },
+          max: { type: "number", minimum: 0 }
+        }),
+        wait: { oneOf: [{ $ref: "#/$defs/unknownWait" }, { $ref: "#/$defs/rangedWait" }, { type: "null" }] },
+        gate: strictObject(["id", "name", "type", "status", "reason", "owner", "nextAction", "wait", "taskRefs"], {
+          id: ID_SCHEMA,
+          name: TEXT_SCHEMA,
+          type: { enum: GATE_TYPES },
+          status: { enum: GATE_STATUSES },
+          reason: TEXT_SCHEMA,
+          owner: { $ref: "#/$defs/owner" },
+          nextAction: NULLABLE_TEXT_SCHEMA,
+          wait: { $ref: "#/$defs/wait" },
+          taskRefs: { type: "array", uniqueItems: true, items: ID_SCHEMA }
+        }),
+        dependency: strictObject(["id", "type", "prerequisiteTaskId", "dependentTaskId"], {
+          id: ID_SCHEMA,
+          type: { enum: DEPENDENCY_TYPES },
+          prerequisiteTaskId: ID_SCHEMA,
+          dependentTaskId: ID_SCHEMA
+        })
+      }
+    });
+  }
+});
+
+// ../core/time.mjs
+function toInstant(value, label = "time") {
+  const candidate = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(candidate.getTime())) throw new TypeError(`${label} must resolve to a valid instant`);
+  return candidate;
+}
+function resolveClock(options = {}) {
+  if (options.clock !== void 0 && typeof options.clock !== "function") {
+    throw new TypeError("options.clock must be a function");
+  }
+  const supplied = options.clock ? options.clock() : options.now;
+  return toInstant(supplied ?? Date.now(), "clock");
+}
+var init_time = __esm({
+  "../core/time.mjs"() {
+  }
+});
+
+// ../core/validator.mjs
+function isRecord(value) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+function close(first, second) {
+  return Math.abs(first - second) <= EPSILON;
+}
+function validateStringArray(collector, value, path) {
+  if (!collector.array(value, path)) return;
+  const seen = /* @__PURE__ */ new Set();
+  value.forEach((item, index) => {
+    const itemPath = `${path}[${index}]`;
+    if (!collector.id(item, itemPath)) return;
+    if (seen.has(item)) collector.add("duplicate_reference", itemPath, `duplicates ${item}`);
+    seen.add(item);
+  });
+}
+function validateOwner(collector, owner, path) {
+  if (!collector.object(owner, path, ["type", "id", "label"])) return;
+  collector.enum(owner.type, `${path}.type`, OWNER_TYPES);
+  collector.id(owner.id, `${path}.id`);
+  collector.string(owner.label, `${path}.label`);
+}
+function validateRange(collector, range, path) {
+  if (range === null) return;
+  if (!collector.object(range, path, ["min", "max"])) return;
+  const minValid = collector.number(range.min, `${path}.min`, { min: 0 });
+  const maxValid = collector.number(range.max, `${path}.max`, { min: 0 });
+  if (minValid && maxValid && range.max < range.min) {
+    collector.add("invalid_range", path, "max must be greater than or equal to min");
+  }
+}
+function validateTask(collector, task, path) {
+  const keys = [
+    "id",
+    "name",
+    "summary",
+    "status",
+    "weight",
+    "earnedWeight",
+    "remainingHours",
+    "recurring",
+    "deferred",
+    "owner",
+    "nextAction",
+    "evidenceRequirement",
+    "evidenceRefs",
+    "gateRefs"
+  ];
+  if (!collector.object(task, path, keys)) return;
+  collector.id(task.id, `${path}.id`);
+  collector.string(task.name, `${path}.name`);
+  collector.string(task.summary, `${path}.summary`);
+  collector.enum(task.status, `${path}.status`, TASK_STATUSES);
+  collector.number(task.weight, `${path}.weight`, { min: Number.EPSILON });
+  collector.number(task.earnedWeight, `${path}.earnedWeight`, { min: 0 });
+  validateRange(collector, task.remainingHours, `${path}.remainingHours`);
+  collector.boolean(task.recurring, `${path}.recurring`);
+  collector.boolean(task.deferred, `${path}.deferred`);
+  validateOwner(collector, task.owner, `${path}.owner`);
+  collector.string(task.nextAction, `${path}.nextAction`, { nullable: true });
+  if (collector.object(task.evidenceRequirement, `${path}.evidenceRequirement`, ["minimumTier", "minCount"])) {
+    collector.enum(task.evidenceRequirement.minimumTier, `${path}.evidenceRequirement.minimumTier`, EVIDENCE_TIERS);
+    collector.number(task.evidenceRequirement.minCount, `${path}.evidenceRequirement.minCount`, { min: 1, integer: true });
+  }
+  validateStringArray(collector, task.evidenceRefs, `${path}.evidenceRefs`);
+  validateStringArray(collector, task.gateRefs, `${path}.gateRefs`);
+}
+function validatePhase(collector, phase, path) {
+  if (!collector.object(phase, path, ["id", "name", "summary", "weight", "tasks"])) return;
+  collector.id(phase.id, `${path}.id`);
+  collector.string(phase.name, `${path}.name`);
+  collector.string(phase.summary, `${path}.summary`);
+  collector.number(phase.weight, `${path}.weight`, { min: Number.EPSILON });
+  if (collector.array(phase.tasks, `${path}.tasks`, { min: 1 })) {
+    phase.tasks.forEach((task, index) => validateTask(collector, task, `${path}.tasks[${index}]`));
+  }
+}
+function validateLocator(collector, locator, path) {
+  if (!isRecord(locator)) {
+    collector.add("expected_object", path, "must be a locator object");
+    return;
+  }
+  if (!LOCATOR_TYPES.includes(locator.type)) {
+    collector.enum(locator.type, `${path}.type`, LOCATOR_TYPES);
+    return;
+  }
+  const shapes = {
+    url: ["type", "url"],
+    file: ["type", "path"],
+    conversation: ["type", "reference"],
+    commit: ["type", "repository", "commit"],
+    artifact: ["type", "name", "digest"]
+  };
+  const keys = shapes[locator.type];
+  collector.object(locator, path, keys);
+  if (locator.type === "url") collector.httpsUrl(locator.url, `${path}.url`);
+  if (locator.type === "file") {
+    if (collector.string(locator.path, `${path}.path`) && !locator.path.startsWith("/")) {
+      collector.add("invalid_file_path", `${path}.path`, "must be an absolute path");
+    }
+  }
+  if (locator.type === "conversation") collector.string(locator.reference, `${path}.reference`);
+  if (locator.type === "commit") {
+    collector.httpsUrl(locator.repository, `${path}.repository`);
+    collector.string(locator.commit, `${path}.commit`, { pattern: COMMIT_PATTERN });
+  }
+  if (locator.type === "artifact") {
+    collector.string(locator.name, `${path}.name`);
+    collector.string(locator.digest, `${path}.digest`, { pattern: SHA256_PATTERN });
+  }
+}
+function validateIntegrity(collector, integrity, path) {
+  if (integrity === null) return;
+  if (!collector.object(integrity, path, ["algorithm", "digest"])) return;
+  if (integrity.algorithm !== "sha256") collector.add("invalid_enum", `${path}.algorithm`, "must be sha256");
+  collector.string(integrity.digest, `${path}.digest`, { pattern: SHA256_PATTERN });
+}
+function validateVerifier(collector, verifier, path) {
+  if (!collector.object(verifier, path, ["type", "id", "label"])) return;
+  collector.enum(verifier.type, `${path}.type`, VERIFIER_TYPES);
+  collector.id(verifier.id, `${path}.id`);
+  collector.string(verifier.label, `${path}.label`);
+}
+function validateEvidence(collector, evidence, path) {
+  const keys = [
+    "id",
+    "kind",
+    "tier",
+    "state",
+    "visibility",
+    "assertion",
+    "publicSummary",
+    "capturedAt",
+    "verifiedAt",
+    "expiresAt",
+    "locator",
+    "integrity",
+    "verifier"
+  ];
+  if (!collector.object(evidence, path, keys)) return;
+  collector.id(evidence.id, `${path}.id`);
+  collector.enum(evidence.kind, `${path}.kind`, EVIDENCE_KINDS);
+  collector.enum(evidence.tier, `${path}.tier`, EVIDENCE_TIERS);
+  collector.enum(evidence.state, `${path}.state`, EVIDENCE_STATES);
+  collector.enum(evidence.visibility, `${path}.visibility`, VISIBILITIES);
+  collector.string(evidence.assertion, `${path}.assertion`);
+  collector.string(evidence.publicSummary, `${path}.publicSummary`);
+  collector.timestamp(evidence.capturedAt, `${path}.capturedAt`);
+  collector.timestamp(evidence.verifiedAt, `${path}.verifiedAt`);
+  collector.timestamp(evidence.expiresAt, `${path}.expiresAt`, { nullable: true });
+  validateLocator(collector, evidence.locator, `${path}.locator`);
+  validateIntegrity(collector, evidence.integrity, `${path}.integrity`);
+  validateVerifier(collector, evidence.verifier, `${path}.verifier`);
+}
+function validateWait(collector, wait, path) {
+  if (wait === null) return;
+  if (!isRecord(wait)) {
+    collector.add("expected_object", path, "must be a typed wait object or null");
+    return;
+  }
+  if (!WAIT_KINDS.includes(wait.kind)) {
+    collector.enum(wait.kind, `${path}.kind`, WAIT_KINDS);
+    return;
+  }
+  const keys = wait.kind === "unknown" ? ["kind", "label"] : ["kind", "label", "min", "max"];
+  collector.object(wait, path, keys);
+  collector.string(wait.label, `${path}.label`);
+  if (wait.kind !== "unknown") validateRange(collector, { min: wait.min, max: wait.max }, path);
+}
+function validateGate(collector, gate, path) {
+  const keys = ["id", "name", "type", "status", "reason", "owner", "nextAction", "wait", "taskRefs"];
+  if (!collector.object(gate, path, keys)) return;
+  collector.id(gate.id, `${path}.id`);
+  collector.string(gate.name, `${path}.name`);
+  collector.enum(gate.type, `${path}.type`, GATE_TYPES);
+  collector.enum(gate.status, `${path}.status`, GATE_STATUSES);
+  collector.string(gate.reason, `${path}.reason`);
+  validateOwner(collector, gate.owner, `${path}.owner`);
+  collector.string(gate.nextAction, `${path}.nextAction`, { nullable: true });
+  validateWait(collector, gate.wait, `${path}.wait`);
+  validateStringArray(collector, gate.taskRefs, `${path}.taskRefs`);
+}
+function validateDependency(collector, dependency, path) {
+  const keys = ["id", "type", "prerequisiteTaskId", "dependentTaskId"];
+  if (!collector.object(dependency, path, keys)) return;
+  collector.id(dependency.id, `${path}.id`);
+  collector.enum(dependency.type, `${path}.type`, DEPENDENCY_TYPES);
+  collector.id(dependency.prerequisiteTaskId, `${path}.prerequisiteTaskId`);
+  collector.id(dependency.dependentTaskId, `${path}.dependentTaskId`);
+}
+function addUnique(collector, map, id2, path, kind) {
+  if (typeof id2 !== "string") return;
+  if (map.has(id2)) collector.add("duplicate_id", path, `${kind} id ${id2} is duplicated`);
+  else map.set(id2, path);
+}
+function instant(value) {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value)) ? Date.parse(value) : null;
+}
+function detectCycles(collector, taskIds, dependencies) {
+  const adjacency = new Map([...taskIds].map((id2) => [id2, []]));
+  for (const dependency of dependencies) {
+    if (adjacency.has(dependency.prerequisiteTaskId) && adjacency.has(dependency.dependentTaskId)) {
+      adjacency.get(dependency.prerequisiteTaskId).push(dependency.dependentTaskId);
+    }
+  }
+  for (const values of adjacency.values()) values.sort();
+  const visiting = /* @__PURE__ */ new Set();
+  const visited = /* @__PURE__ */ new Set();
+  const stack = [];
+  function walk(id2) {
+    if (visiting.has(id2)) {
+      const start = stack.indexOf(id2);
+      const cycle = [...stack.slice(start), id2];
+      collector.add("dependency_cycle", "$.dependencies", `contains a cycle: ${cycle.join(" -> ")}`);
+      return true;
+    }
+    if (visited.has(id2)) return false;
+    visiting.add(id2);
+    stack.push(id2);
+    for (const next of adjacency.get(id2) ?? []) {
+      if (walk(next)) return true;
+    }
+    stack.pop();
+    visiting.delete(id2);
+    visited.add(id2);
+    return false;
+  }
+  for (const id2 of [...taskIds].sort()) {
+    if (walk(id2)) break;
+  }
+}
+function semanticValidation(collector, manifest, options) {
+  if (!isRecord(manifest) || !Array.isArray(manifest.phases)) return;
+  const phaseIds = /* @__PURE__ */ new Map();
+  const tasks = /* @__PURE__ */ new Map();
+  let phaseWeight = 0;
+  manifest.phases.forEach((phase, phaseIndex) => {
+    if (!isRecord(phase) || !Array.isArray(phase.tasks)) return;
+    addUnique(collector, phaseIds, phase.id, `$.phases[${phaseIndex}].id`, "phase");
+    let taskWeight = 0;
+    phase.tasks.forEach((task, taskIndex) => {
+      if (!isRecord(task)) return;
+      const path = `$.phases[${phaseIndex}].tasks[${taskIndex}]`;
+      addUnique(collector, tasks, task.id, `${path}.id`, "task");
+      if (Number.isFinite(task.weight)) taskWeight += task.weight;
+      if (Number.isFinite(task.weight) && Number.isFinite(task.earnedWeight) && task.earnedWeight > task.weight + EPSILON) {
+        collector.add("earned_exceeds_weight", `${path}.earnedWeight`, "must not exceed task weight");
+      }
+      if (task.status === "complete" && Number.isFinite(task.weight) && !close(task.earnedWeight, task.weight)) {
+        collector.add("invalid_credit", `${path}.earnedWeight`, "complete tasks must earn full weight");
+      }
+      if (["blocked", "not_started"].includes(task.status) && !close(task.earnedWeight, 0)) {
+        collector.add("invalid_credit", `${path}.earnedWeight`, `${task.status} tasks must earn zero`);
+      }
+      if (task.status === "complete") {
+        if (task.remainingHours === null || !close(task.remainingHours?.min ?? NaN, 0) || !close(task.remainingHours?.max ?? NaN, 0)) {
+          collector.add("invalid_remaining_hours", `${path}.remainingHours`, "complete tasks must have a 0–0 range");
+        }
+        if (task.nextAction !== null) collector.add("invalid_next_action", `${path}.nextAction`, "complete tasks must use null");
+      } else if (typeof task.nextAction !== "string" || task.nextAction.trim() === "") {
+        collector.add("missing_next_action", `${path}.nextAction`, "unfinished tasks require a concrete next action");
+      }
+    });
+    if (Number.isFinite(phase.weight) && !close(taskWeight, phase.weight)) {
+      collector.add("phase_weight_mismatch", `$.phases[${phaseIndex}].tasks`, `task weights ${taskWeight} do not equal phase weight ${phase.weight}`);
+    }
+    if (Number.isFinite(phase.weight)) phaseWeight += phase.weight;
+  });
+  if (Number.isFinite(manifest.totalWeight) && !close(phaseWeight, manifest.totalWeight)) {
+    collector.add("total_weight_mismatch", "$.phases", `phase weights ${phaseWeight} do not equal total weight ${manifest.totalWeight}`);
+  }
+  if (manifest.totalWeight !== 100) collector.add("invalid_total_weight", "$.totalWeight", "must equal 100");
+  const evidence = /* @__PURE__ */ new Map();
+  if (Array.isArray(manifest.evidence)) {
+    manifest.evidence.forEach((item, index) => {
+      if (!isRecord(item)) return;
+      addUnique(collector, evidence, item.id, `$.evidence[${index}].id`, "evidence");
+      const captured = instant(item.capturedAt);
+      const verified = instant(item.verifiedAt);
+      const expires = instant(item.expiresAt);
+      if (captured !== null && verified !== null && verified < captured) {
+        collector.add("invalid_time_order", `$.evidence[${index}].verifiedAt`, "must not precede capturedAt");
+      }
+      if (captured !== null && expires !== null && expires <= captured) {
+        collector.add("invalid_time_order", `$.evidence[${index}].expiresAt`, "must follow capturedAt");
+      }
+    });
+  }
+  const gates = /* @__PURE__ */ new Map();
+  if (Array.isArray(manifest.gates)) {
+    manifest.gates.forEach((gate, index) => {
+      if (!isRecord(gate)) return;
+      addUnique(collector, gates, gate.id, `$.gates[${index}].id`, "gate");
+      if (["unsatisfied", "waiting"].includes(gate.status) && (typeof gate.nextAction !== "string" || gate.nextAction.trim() === "")) {
+        collector.add("missing_next_action", `$.gates[${index}].nextAction`, "uncleared gates require a concrete next action");
+      }
+      if (["satisfied", "waived"].includes(gate.status) && gate.nextAction !== null) {
+        collector.add("invalid_next_action", `$.gates[${index}].nextAction`, "cleared gates must use null");
+      }
+    });
+  }
+  const auditAsOf = instant(manifest.audit?.evidenceAsOf);
+  for (const [taskId, taskPath] of tasks) {
+    const [phaseIndex, taskIndex] = taskPath.match(/\d+/g)?.map(Number) ?? [];
+    const task = manifest.phases[phaseIndex]?.tasks[taskIndex];
+    if (!task) continue;
+    const evidenceRefs = Array.isArray(task.evidenceRefs) ? task.evidenceRefs : [];
+    const gateRefs = Array.isArray(task.gateRefs) ? task.gateRefs : [];
+    for (const [index, evidenceId] of evidenceRefs.entries()) {
+      if (!evidence.has(evidenceId)) {
+        collector.add("dangling_evidence_ref", `${taskPath}.evidenceRefs[${index}]`, `unknown evidence id ${evidenceId}`);
+      }
+    }
+    for (const [index, gateId] of gateRefs.entries()) {
+      if (!gates.has(gateId)) {
+        collector.add("dangling_gate_ref", `${taskPath}.gateRefs[${index}]`, `unknown gate id ${gateId}`);
+      }
+    }
+    if (Number.isFinite(task.earnedWeight) && task.earnedWeight > 0 && isRecord(task.evidenceRequirement)) {
+      const qualifying = evidenceRefs.filter((evidenceId) => {
+        const evidencePath = evidence.get(evidenceId);
+        if (!evidencePath) return false;
+        const index = Number(evidencePath.match(/\d+/)?.[0]);
+        const item = manifest.evidence[index];
+        const captured = instant(item.capturedAt);
+        const expires = instant(item.expiresAt);
+        return item.state === "current" && EVIDENCE_TIER_RANK[item.tier] >= EVIDENCE_TIER_RANK[task.evidenceRequirement.minimumTier] && (auditAsOf === null || captured === null || captured <= auditAsOf) && (auditAsOf === null || expires === null || expires > auditAsOf);
+      });
+      if (qualifying.length < task.evidenceRequirement.minCount) {
+        collector.add(
+          "insufficient_evidence",
+          `${taskPath}.evidenceRefs`,
+          `earned credit requires ${task.evidenceRequirement.minCount} current ${task.evidenceRequirement.minimumTier}-or-better evidence record(s)`
+        );
+      }
+    }
+    for (const gateId of gateRefs) {
+      const gatePath = gates.get(gateId);
+      if (!gatePath) continue;
+      const gateIndex = Number(gatePath.match(/\d+/)?.[0]);
+      const gate = manifest.gates[gateIndex];
+      const reciprocalTaskRefs = Array.isArray(gate.taskRefs) ? gate.taskRefs : [];
+      if (!reciprocalTaskRefs.includes(taskId)) {
+        collector.add("gate_reference_mismatch", `${taskPath}.gateRefs`, `${gateId} does not reciprocally reference ${taskId}`);
+      }
+      if (["unsatisfied", "waiting"].includes(gate.status) && task.earnedWeight > 0) {
+        collector.add("credit_behind_gate", `${taskPath}.earnedWeight`, `must be zero while gate ${gateId} is uncleared`);
+      }
+    }
+  }
+  if (Array.isArray(manifest.gates)) {
+    manifest.gates.forEach((gate, gateIndex) => {
+      if (!isRecord(gate)) return;
+      const taskRefs = Array.isArray(gate.taskRefs) ? gate.taskRefs : [];
+      for (const [index, taskId] of taskRefs.entries()) {
+        const taskPath = tasks.get(taskId);
+        if (!taskPath) collector.add("dangling_task_ref", `$.gates[${gateIndex}].taskRefs[${index}]`, `unknown task id ${taskId}`);
+        else {
+          const [phaseIndex, taskIndex] = taskPath.match(/\d+/g)?.map(Number) ?? [];
+          const reciprocalGateRefs = manifest.phases[phaseIndex].tasks[taskIndex].gateRefs;
+          if (!(Array.isArray(reciprocalGateRefs) ? reciprocalGateRefs : []).includes(gate.id)) {
+            collector.add("gate_reference_mismatch", `$.gates[${gateIndex}].taskRefs`, `${taskId} does not reciprocally reference ${gate.id}`);
+          }
+        }
+      }
+    });
+  }
+  const dependencyIds = /* @__PURE__ */ new Map();
+  const edgeKeys = /* @__PURE__ */ new Set();
+  if (Array.isArray(manifest.dependencies)) {
+    manifest.dependencies.forEach((dependency, index) => {
+      if (!isRecord(dependency)) return;
+      addUnique(collector, dependencyIds, dependency.id, `$.dependencies[${index}].id`, "dependency");
+      if (!tasks.has(dependency.prerequisiteTaskId)) {
+        collector.add("dangling_dependency_ref", `$.dependencies[${index}].prerequisiteTaskId`, `unknown task id ${dependency.prerequisiteTaskId}`);
+      }
+      if (!tasks.has(dependency.dependentTaskId)) {
+        collector.add("dangling_dependency_ref", `$.dependencies[${index}].dependentTaskId`, `unknown task id ${dependency.dependentTaskId}`);
+      }
+      if (dependency.prerequisiteTaskId === dependency.dependentTaskId) {
+        collector.add("self_dependency", `$.dependencies[${index}]`, "a task cannot depend on itself");
+      }
+      const edgeKey = `${dependency.type}:${dependency.prerequisiteTaskId}:${dependency.dependentTaskId}`;
+      if (edgeKeys.has(edgeKey)) collector.add("duplicate_dependency", `$.dependencies[${index}]`, "duplicates an existing dependency edge");
+      edgeKeys.add(edgeKey);
+    });
+    detectCycles(collector, new Set(tasks.keys()), manifest.dependencies.filter(isRecord));
+  }
+  const evidenceAsOf = instant(manifest.audit?.evidenceAsOf);
+  const verifiedAt = instant(manifest.audit?.verifiedAt);
+  const nextDueAt = instant(manifest.audit?.nextDueAt);
+  if (evidenceAsOf !== null && verifiedAt !== null && verifiedAt < evidenceAsOf) {
+    collector.add("invalid_time_order", "$.audit.verifiedAt", "must not precede evidenceAsOf");
+  }
+  const auditBaseline = verifiedAt ?? evidenceAsOf;
+  if (auditBaseline !== null && nextDueAt !== null && nextDueAt <= auditBaseline) {
+    collector.add("invalid_time_order", "$.audit.nextDueAt", "must follow the latest audit timestamp");
+  }
+  if (manifest.source?.commit !== null && manifest.source?.repository === null) {
+    collector.add("incomplete_provenance", "$.source.repository", "is required when commit is present");
+  }
+  if ([manifest.source?.deploymentId, manifest.source?.buildId, manifest.source?.manifestSha256].some((value) => value !== null) && manifest.source?.commit === null) {
+    collector.add("incomplete_provenance", "$.source.commit", "is required when build or deployment provenance is present");
+  }
+  if (options.now !== void 0 || options.clock !== void 0) {
+    let now;
+    try {
+      now = resolveClock(options).getTime();
+    } catch (error2) {
+      throw error2;
+    }
+    const evidenceItems = Array.isArray(manifest.evidence) ? manifest.evidence : [];
+    const timeFields = [
+      ["$.audit.evidenceAsOf", manifest.audit?.evidenceAsOf],
+      ["$.audit.verifiedAt", manifest.audit?.verifiedAt],
+      ...evidenceItems.flatMap((item, index) => [
+        [`$.evidence[${index}].capturedAt`, item?.capturedAt],
+        [`$.evidence[${index}].verifiedAt`, item?.verifiedAt]
+      ])
+    ];
+    for (const [path, value] of timeFields) {
+      const parsed = instant(value);
+      if (parsed !== null && parsed > now) collector.add("timestamp_in_future", path, "must not be later than the injected clock");
+    }
+  }
+}
+function structuralValidation(collector, manifest) {
+  const rootKeys = ["schemaVersion", "route", "initiative", "source", "audit", "totalWeight", "phases", "evidence", "gates", "dependencies"];
+  if (!collector.object(manifest, "$", [...rootKeys, "delivery"], rootKeys)) return;
+  for (const error2 of validateDelivery(manifest)) collector.add(error2.code, error2.path, error2.message);
+  if (manifest.schemaVersion !== 1) collector.add("unsupported_schema_version", "$.schemaVersion", "must equal 1");
+  collector.route(manifest.route, "$.route");
+  collector.number(manifest.totalWeight, "$.totalWeight", { min: 100, max: 100 });
+  if (collector.object(manifest.initiative, "$.initiative", ["id", "name", "release", "state"])) {
+    collector.id(manifest.initiative.id, "$.initiative.id");
+    collector.string(manifest.initiative.name, "$.initiative.name");
+    collector.string(manifest.initiative.release, "$.initiative.release");
+    collector.enum(manifest.initiative.state, "$.initiative.state", INITIATIVE_STATES);
+  }
+  const sourceKeys = ["repository", "commit", "deploymentId", "buildId", "manifestSha256"];
+  if (collector.object(manifest.source, "$.source", sourceKeys)) {
+    collector.httpsUrl(manifest.source.repository, "$.source.repository", { nullable: true });
+    collector.string(manifest.source.commit, "$.source.commit", { nullable: true, pattern: COMMIT_PATTERN });
+    collector.string(manifest.source.deploymentId, "$.source.deploymentId", { nullable: true });
+    collector.string(manifest.source.buildId, "$.source.buildId", { nullable: true });
+    collector.string(manifest.source.manifestSha256, "$.source.manifestSha256", { nullable: true, pattern: SHA256_PATTERN });
+  }
+  const auditKeys = ["auditId", "state", "evidenceAsOf", "verifiedAt", "nextDueAt", "staleAfterSeconds"];
+  if (collector.object(manifest.audit, "$.audit", auditKeys)) {
+    collector.id(manifest.audit.auditId, "$.audit.auditId");
+    collector.enum(manifest.audit.state, "$.audit.state", AUDIT_STATES);
+    collector.timestamp(manifest.audit.evidenceAsOf, "$.audit.evidenceAsOf");
+    collector.timestamp(manifest.audit.verifiedAt, "$.audit.verifiedAt", { nullable: true });
+    collector.timestamp(manifest.audit.nextDueAt, "$.audit.nextDueAt", { nullable: true });
+    collector.number(manifest.audit.staleAfterSeconds, "$.audit.staleAfterSeconds", { min: 1, integer: true });
+  }
+  if (collector.array(manifest.phases, "$.phases", { min: 1 })) {
+    manifest.phases.forEach((phase, index) => validatePhase(collector, phase, `$.phases[${index}]`));
+  }
+  if (collector.array(manifest.evidence, "$.evidence")) {
+    manifest.evidence.forEach((evidence, index) => validateEvidence(collector, evidence, `$.evidence[${index}]`));
+  }
+  if (collector.array(manifest.gates, "$.gates")) {
+    manifest.gates.forEach((gate, index) => validateGate(collector, gate, `$.gates[${index}]`));
+  }
+  if (collector.array(manifest.dependencies, "$.dependencies")) {
+    manifest.dependencies.forEach((dependency, index) => validateDependency(collector, dependency, `$.dependencies[${index}]`));
+  }
+}
+function validateManifest(manifest, options = {}) {
+  const allowedOptions = /* @__PURE__ */ new Set(["throwOnError", "now", "clock"]);
+  for (const key of Object.keys(options)) {
+    if (!allowedOptions.has(key)) throw new TypeError(`Unknown validateManifest option: ${key}`);
+  }
+  const collector = new Collector();
+  structuralValidation(collector, manifest);
+  semanticValidation(collector, manifest, options);
+  const result = Object.freeze({
+    valid: collector.errors.length === 0,
+    errors: Object.freeze(collector.errors.map((error2) => Object.freeze(error2)))
+  });
+  if (!result.valid && options.throwOnError) throw new ManifestValidationError(result.errors);
+  return result;
+}
+var ID_PATTERN, ISO_PATTERN, SHA256_PATTERN, COMMIT_PATTERN, EPSILON, SECRET_QUERY_RE, Collector, ManifestValidationError;
+var init_validator = __esm({
+  "../core/validator.mjs"() {
+    init_schema();
+    init_time();
+    init_delivery();
+    ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+    ISO_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+    SHA256_PATTERN = /^[a-f0-9]{64}$/;
+    COMMIT_PATTERN = /^[a-f0-9]{40}$/;
+    EPSILON = 1e-9;
+    SECRET_QUERY_RE = /(?:^|_)(?:access|api|auth|credential|key|password|secret|signature|token)(?:$|_)/i;
+    Collector = class {
+      errors = [];
+      add(code, path, message) {
+        this.errors.push({ code, path, message });
+      }
+      object(value, path, allowed, required2 = allowed) {
+        if (!isRecord(value)) {
+          this.add("expected_object", path, "must be a plain object");
+          return false;
+        }
+        for (const key of Object.keys(value)) {
+          if (!allowed.includes(key)) this.add("unknown_property", `${path}.${key}`, "is not allowed");
+        }
+        for (const key of required2) {
+          if (!Object.hasOwn(value, key)) this.add("missing_property", `${path}.${key}`, "is required");
+        }
+        return true;
+      }
+      array(value, path, { min = 0 } = {}) {
+        if (!Array.isArray(value)) {
+          this.add("expected_array", path, "must be an array");
+          return false;
+        }
+        if (value.length < min) this.add("array_too_short", path, `must contain at least ${min} item(s)`);
+        return true;
+      }
+      string(value, path, { nullable: nullable2 = false, pattern, min = 1 } = {}) {
+        if (nullable2 && value === null) return true;
+        if (typeof value !== "string") {
+          this.add("expected_string", path, nullable2 ? "must be a string or null" : "must be a string");
+          return false;
+        }
+        if (value.trim().length < min) this.add("empty_string", path, "must not be empty");
+        if (pattern && !pattern.test(value)) this.add("invalid_format", path, "has an invalid format");
+        return true;
+      }
+      number(value, path, { min = -Infinity, max = Infinity, integer: integer2 = false } = {}) {
+        if (!Number.isFinite(value)) {
+          this.add("expected_number", path, "must be a finite number");
+          return false;
+        }
+        if (integer2 && !Number.isInteger(value)) this.add("expected_integer", path, "must be an integer");
+        if (value < min || value > max) this.add("number_out_of_range", path, `must be between ${min} and ${max}`);
+        return true;
+      }
+      boolean(value, path) {
+        if (typeof value !== "boolean") {
+          this.add("expected_boolean", path, "must be a boolean");
+          return false;
+        }
+        return true;
+      }
+      enum(value, path, values) {
+        if (!values.includes(value)) {
+          this.add("invalid_enum", path, `must be one of: ${values.join(", ")}`);
+          return false;
+        }
+        return true;
+      }
+      timestamp(value, path, { nullable: nullable2 = false } = {}) {
+        if (nullable2 && value === null) return true;
+        if (!this.string(value, path)) return false;
+        if (!ISO_PATTERN.test(value) || Number.isNaN(Date.parse(value)) || new Date(value).toISOString() !== value) {
+          this.add("invalid_timestamp", path, "must be an exact UTC ISO-8601 timestamp with milliseconds");
+          return false;
+        }
+        return true;
+      }
+      id(value, path) {
+        return this.string(value, path, { pattern: ID_PATTERN });
+      }
+      httpsUrl(value, path, { nullable: nullable2 = false } = {}) {
+        if (nullable2 && value === null) return true;
+        if (!this.string(value, path)) return false;
+        try {
+          const parsed = new URL(value);
+          if (parsed.protocol !== "https:") throw new Error("not https");
+          if (parsed.username || parsed.password) throw new Error("credentials");
+          for (const key of parsed.searchParams.keys()) {
+            if (SECRET_QUERY_RE.test(key)) throw new Error("secret query");
+          }
+        } catch {
+          this.add("invalid_url", path, "must be an absolute HTTPS URL without credentials or secret-like query parameters");
+          return false;
+        }
+        return true;
+      }
+      route(value, path) {
+        if (!this.string(value, path)) return false;
+        if (!value.startsWith("/") || value.startsWith("//") || /[?#\\\\\u0000-\u001f\u007f]/.test(value)) {
+          this.add("invalid_route", path, "must be an absolute URL path without authority, query, fragment, backslash, or control characters");
+          return false;
+        }
+        try {
+          const segments = value.split("/");
+          if (segments.some((segment) => {
+            const decoded = decodeURIComponent(segment).toLowerCase();
+            return decoded === "." || decoded === "..";
+          })) {
+            this.add("invalid_route", path, "must not contain traversal segments");
+            return false;
+          }
+        } catch {
+          this.add("invalid_route", path, "must contain valid percent encoding");
+          return false;
+        }
+        return true;
+      }
+    };
+    ManifestValidationError = class extends Error {
+      constructor(errors) {
+        super(`Manifest validation failed with ${errors.length} error(s)`);
+        this.name = "ManifestValidationError";
+        this.errors = errors;
+      }
+    };
+  }
+});
+
+// ../core/graph.mjs
+function taskRecords(manifest) {
+  return manifest.phases.flatMap((phase) => phase.tasks.map((task) => ({ ...task, phaseId: phase.id })));
+}
+function lexicographicPath(first, second) {
+  const firstKey = first.join("\0");
+  const secondKey = second.join("\0");
+  if (firstKey < secondKey) return -1;
+  if (firstKey > secondKey) return 1;
+  return 0;
+}
+function topologicalOrder(manifest) {
+  validateManifest(manifest, { throwOnError: true });
+  const ids = taskRecords(manifest).map((task) => task.id).sort();
+  const incoming = new Map(ids.map((id2) => [id2, 0]));
+  const outgoing = new Map(ids.map((id2) => [id2, []]));
+  for (const dependency of manifest.dependencies) {
+    outgoing.get(dependency.prerequisiteTaskId).push(dependency.dependentTaskId);
+    incoming.set(dependency.dependentTaskId, incoming.get(dependency.dependentTaskId) + 1);
+  }
+  for (const values of outgoing.values()) values.sort();
+  const ready = ids.filter((id2) => incoming.get(id2) === 0);
+  const ordered = [];
+  while (ready.length > 0) {
+    const id2 = ready.shift();
+    ordered.push(id2);
+    for (const dependent of outgoing.get(id2)) {
+      incoming.set(dependent, incoming.get(dependent) - 1);
+      if (incoming.get(dependent) === 0) {
+        ready.push(dependent);
+        ready.sort();
+      }
+    }
+  }
+  return Object.freeze(ordered);
+}
+function criticalPath(manifest) {
+  validateManifest(manifest, { throwOnError: true });
+  const ordered = [...topologicalOrder(manifest)];
+  const tasks = new Map(taskRecords(manifest).map((task) => [task.id, task]));
+  const activeIds = ordered.filter((id2) => {
+    const task = tasks.get(id2);
+    return task.status !== "complete" && !task.deferred;
+  });
+  const missingEstimateTaskIds = activeIds.filter((id2) => tasks.get(id2).remainingHours === null);
+  if (missingEstimateTaskIds.length > 0) {
+    return Object.freeze({
+      determinate: false,
+      reason: "missing_estimates",
+      path: Object.freeze([]),
+      durationHours: null,
+      missingEstimateTaskIds: Object.freeze(missingEstimateTaskIds),
+      topologicalOrder: Object.freeze(ordered)
+    });
+  }
+  if (activeIds.length === 0) {
+    return Object.freeze({
+      determinate: true,
+      reason: null,
+      path: Object.freeze([]),
+      durationHours: Object.freeze({ min: 0, max: 0 }),
+      missingEstimateTaskIds: Object.freeze([]),
+      topologicalOrder: Object.freeze(ordered)
+    });
+  }
+  const active = new Set(activeIds);
+  const prerequisites = new Map(activeIds.map((id2) => [id2, []]));
+  for (const dependency of manifest.dependencies) {
+    if (dependency.type === "blocks" && active.has(dependency.prerequisiteTaskId) && active.has(dependency.dependentTaskId)) {
+      prerequisites.get(dependency.dependentTaskId).push(dependency.prerequisiteTaskId);
+    }
+  }
+  for (const values of prerequisites.values()) values.sort();
+  const best = /* @__PURE__ */ new Map();
+  for (const id2 of ordered.filter((candidate) => active.has(candidate))) {
+    const task = tasks.get(id2);
+    const own = task.remainingHours;
+    const candidates2 = prerequisites.get(id2).map((prerequisite) => best.get(prerequisite));
+    candidates2.sort((first, second) => {
+      if (second.max !== first.max) return second.max - first.max;
+      return lexicographicPath(first.path, second.path);
+    });
+    const previous = candidates2[0] ?? { min: 0, max: 0, path: [] };
+    best.set(id2, {
+      min: previous.min + own.min,
+      max: previous.max + own.max,
+      path: [...previous.path, id2]
+    });
+  }
+  const candidates = [...best.values()].sort((first, second) => {
+    if (second.max !== first.max) return second.max - first.max;
+    return lexicographicPath(first.path, second.path);
+  });
+  const selected = candidates[0];
+  return Object.freeze({
+    determinate: true,
+    reason: null,
+    path: Object.freeze(selected.path),
+    durationHours: Object.freeze({ min: selected.min, max: selected.max }),
+    missingEstimateTaskIds: Object.freeze([]),
+    topologicalOrder: Object.freeze(ordered)
+  });
+}
+var init_graph = __esm({
+  "../core/graph.mjs"() {
+    init_validator();
+  }
+});
+
+// ../core/calculator.mjs
+function credit(task) {
+  if (task.status === "complete") return task.weight;
+  if (task.status === "in_progress") return task.earnedWeight;
+  return 0;
+}
+function evidenceIsCurrent(evidence, now) {
+  return evidence.state === "current" && (evidence.expiresAt === null || Date.parse(evidence.expiresAt) > now);
+}
+function calculateStatus(manifest, options = {}) {
+  const allowedOptions = /* @__PURE__ */ new Set(["now", "clock"]);
+  for (const key of Object.keys(options)) {
+    if (!allowedOptions.has(key)) throw new TypeError(`Unknown calculateStatus option: ${key}`);
+  }
+  validateManifest(manifest, { throwOnError: true });
+  const now = resolveClock(options);
+  if (options.now !== void 0 || options.clock !== void 0) {
+    validateManifest(manifest, { now, throwOnError: true });
+  }
+  const nowMs = now.getTime();
+  const tasks = manifest.phases.flatMap((phase) => phase.tasks.map((task) => ({ ...task, phaseId: phase.id })));
+  const evidenceById = new Map(manifest.evidence.map((evidence) => [evidence.id, evidence]));
+  const phases = manifest.phases.map((phase) => {
+    const earnedWeight2 = phase.tasks.reduce((sum, task) => sum + credit(task), 0);
+    return Object.freeze({
+      id: phase.id,
+      weight: phase.weight,
+      earnedWeight: earnedWeight2,
+      exactPercent: earnedWeight2 / phase.weight * 100,
+      displayPercent: Math.round(earnedWeight2 / phase.weight * 100),
+      taskCount: phase.tasks.length,
+      completedTaskCount: phase.tasks.filter((task) => task.status === "complete").length
+    });
+  });
+  const earnedWeight = phases.reduce((sum, phase) => sum + phase.earnedWeight, 0);
+  const evidenceSupportingCredit = new Set(
+    tasks.filter((task) => credit(task) > 0).flatMap((task) => task.evidenceRefs)
+  );
+  const invalidEvidenceIds = [...evidenceSupportingCredit].filter((id2) => !evidenceIsCurrent(evidenceById.get(id2), nowMs)).sort();
+  const expiredEvidenceIds = [...evidenceSupportingCredit].filter((id2) => {
+    const evidence = evidenceById.get(id2);
+    return evidence.expiresAt !== null && Date.parse(evidence.expiresAt) <= nowMs;
+  }).sort();
+  const baseline = manifest.audit.verifiedAt ?? manifest.audit.evidenceAsOf;
+  const ageSeconds = Math.max(0, Math.floor((nowMs - Date.parse(baseline)) / 1e3));
+  const auditIsStale = manifest.audit.nextDueAt !== null ? nowMs > Date.parse(manifest.audit.nextDueAt) : ageSeconds > manifest.audit.staleAfterSeconds;
+  let verificationState = "current";
+  if (manifest.audit.state === "proposal") verificationState = "proposal";
+  else if (invalidEvidenceIds.length > 0) verificationState = "stale_evidence";
+  else if (auditIsStale || manifest.audit.state === "stale") verificationState = "stale_audit";
+  else if (manifest.audit.state === "superseded") verificationState = "superseded";
+  const timeSummary = tasks.reduce((summary, task) => {
+    if (task.remainingHours === null) {
+      if (task.status !== "complete") summary.unknownEstimateTaskIds.push(task.id);
+      return summary;
+    }
+    const bucket = task.deferred ? summary.deferred : summary.active;
+    bucket.min += task.remainingHours.min;
+    bucket.max += task.remainingHours.max;
+    return summary;
+  }, {
+    active: { min: 0, max: 0 },
+    deferred: { min: 0, max: 0 },
+    unknownEstimateTaskIds: []
+  });
+  const gateSummary = {
+    satisfied: manifest.gates.filter((gate) => gate.status === "satisfied").length,
+    unsatisfied: manifest.gates.filter((gate) => gate.status === "unsatisfied").length,
+    waiting: manifest.gates.filter((gate) => gate.status === "waiting").length,
+    waived: manifest.gates.filter((gate) => gate.status === "waived").length
+  };
+  return Object.freeze({
+    asOf: now.toISOString(),
+    delivery: calculateDelivery(manifest, now),
+    score: Object.freeze({
+      earnedWeight,
+      totalWeight: manifest.totalWeight,
+      exactPercent: earnedWeight / manifest.totalWeight * 100,
+      displayPercent: Math.round(earnedWeight / manifest.totalWeight * 100)
+    }),
+    phases: Object.freeze(phases),
+    tasks: Object.freeze({
+      total: tasks.length,
+      complete: tasks.filter((task) => task.status === "complete").length,
+      inProgress: tasks.filter((task) => task.status === "in_progress").length,
+      blocked: tasks.filter((task) => task.status === "blocked").length,
+      notStarted: tasks.filter((task) => task.status === "not_started").length
+    }),
+    evidence: Object.freeze({
+      total: manifest.evidence.length,
+      supportingCredit: evidenceSupportingCredit.size,
+      invalidEvidenceIds: Object.freeze(invalidEvidenceIds),
+      expiredEvidenceIds: Object.freeze(expiredEvidenceIds),
+      highestTier: manifest.evidence.reduce((best, item) => EVIDENCE_TIER_RANK[item.tier] > EVIDENCE_TIER_RANK[best] ? item.tier : best, "assertion")
+    }),
+    audit: Object.freeze({
+      state: manifest.audit.state,
+      verificationState,
+      ageSeconds,
+      staleAfterSeconds: manifest.audit.staleAfterSeconds,
+      isStale: auditIsStale,
+      nextDueAt: manifest.audit.nextDueAt
+    }),
+    time: Object.freeze({
+      active: Object.freeze(timeSummary.active),
+      deferred: Object.freeze(timeSummary.deferred),
+      unknownEstimateTaskIds: Object.freeze(timeSummary.unknownEstimateTaskIds.sort())
+    }),
+    gates: Object.freeze(gateSummary),
+    criticalPath: criticalPath(manifest)
+  });
+}
+var init_calculator = __esm({
+  "../core/calculator.mjs"() {
+    init_graph();
+    init_delivery();
+    init_schema();
+    init_time();
+    init_validator();
+  }
+});
+
+// ../core/public.mjs
+function publicOwner(owner) {
+  return { type: owner.type, label: owner.label };
+}
+function publicLocator(evidence) {
+  if (evidence.visibility !== "public") return void 0;
+  if (["url", "commit", "artifact"].includes(evidence.locator.type)) return { ...evidence.locator };
+  return void 0;
+}
+function publicEvidence(evidence) {
+  const projected = {
+    id: evidence.id,
+    kind: evidence.kind,
+    tier: evidence.tier,
+    state: evidence.state,
+    visibility: evidence.visibility,
+    summary: evidence.visibility === "public" ? evidence.assertion : evidence.publicSummary,
+    capturedAt: evidence.capturedAt,
+    verifiedAt: evidence.verifiedAt,
+    expiresAt: evidence.expiresAt,
+    verifier: { type: evidence.verifier.type, label: evidence.verifier.label }
+  };
+  if (evidence.visibility === "public") projected.integrity = evidence.integrity;
+  const locator = publicLocator(evidence);
+  if (locator !== void 0) projected.locator = locator;
+  return projected;
+}
+function manifestStaleAt(manifest) {
+  if (manifest.audit.nextDueAt !== null) return manifest.audit.nextDueAt;
+  const baseline = manifest.audit.verifiedAt ?? manifest.audit.evidenceAsOf;
+  return new Date(Date.parse(baseline) + manifest.audit.staleAfterSeconds * 1e3).toISOString();
+}
+function createPublicProjection(manifest, options = {}) {
+  const status = calculateStatus(manifest, options);
+  const canonicalManifestSha256 = sha256(manifest);
+  const tasks = manifest.phases.flatMap((phase) => phase.tasks);
+  const blockers = tasks.filter((task) => task.status === "blocked").map((task) => ({ id: task.id, name: task.name, summary: task.summary, nextAction: task.nextAction }));
+  const externalGates = manifest.gates.filter((gate) => gate.type === "external_approval" && ["unsatisfied", "waiting"].includes(gate.status)).map((gate) => ({ id: gate.id, name: gate.name, status: gate.status, reason: gate.reason, wait: gate.wait, nextAction: gate.nextAction }));
+  const staleAt = manifestStaleAt(manifest);
+  return {
+    schemaVersion: manifest.schemaVersion,
+    route: manifest.route,
+    initiative: { ...manifest.initiative },
+    project: manifest.initiative.name,
+    readinessQuestion: `Delivery readiness for ${manifest.initiative.release}`,
+    statusState: manifest.initiative.state,
+    source: { ...manifest.source },
+    provenance: {
+      canonicalManifestSha256,
+      auditId: manifest.audit.auditId
+    },
+    manifestDigest: canonicalManifestSha256,
+    audit: { ...manifest.audit, asOf: status.asOf, verificationState: status.audit.verificationState, staleAt },
+    manifestFreshness: {
+      basis: "manifest_snapshot",
+      state: status.audit.verificationState,
+      asOf: status.asOf,
+      evidenceAsOf: manifest.audit.evidenceAsOf,
+      verifiedAt: manifest.audit.verifiedAt,
+      staleAt,
+      ageSeconds: status.audit.ageSeconds,
+      isStale: status.audit.isStale
+    },
+    score: { ...status.score },
+    delivery: status.delivery,
+    readiness: { exact: status.score.exactPercent, displayed: status.score.displayPercent, denominator: status.score.totalWeight },
+    phases: manifest.phases.map((phase) => ({
+      id: phase.id,
+      name: phase.name,
+      summary: phase.summary,
+      weight: phase.weight,
+      score: status.phases.find((item) => item.id === phase.id),
+      earnedWeight: status.phases.find((item) => item.id === phase.id).earnedWeight,
+      completion: status.phases.find((item) => item.id === phase.id).exactPercent,
+      tasks: phase.tasks.map((task) => ({
+        id: task.id,
+        name: task.name,
+        summary: task.summary,
+        status: task.status,
+        weight: task.weight,
+        earnedWeight: task.earnedWeight,
+        remainingHours: task.remainingHours,
+        recurring: task.recurring,
+        deferred: task.deferred,
+        owner: publicOwner(task.owner),
+        nextAction: task.nextAction,
+        evidenceRequirement: { ...task.evidenceRequirement },
+        evidenceRefs: [...task.evidenceRefs],
+        gateRefs: [...task.gateRefs]
+      }))
+    })),
+    evidence: manifest.evidence.map(publicEvidence),
+    gates: manifest.gates.map((gate) => ({
+      id: gate.id,
+      name: gate.name,
+      type: gate.type,
+      status: gate.status,
+      reason: gate.reason,
+      owner: publicOwner(gate.owner),
+      nextAction: gate.nextAction,
+      wait: gate.wait === null ? null : { ...gate.wait },
+      taskRefs: [...gate.taskRefs]
+    })),
+    dependencies: manifest.dependencies.map((dependency) => ({ ...dependency })),
+    effort: { active: { ...status.time.active }, soak: null, deferred: { ...status.time.deferred } },
+    blockers,
+    externalGates,
+    recurringTaskCount: tasks.filter((task) => task.recurring && task.status !== "complete").length,
+    liveHealth: { state: "unknown", observedAt: null },
+    summaries: {
+      tasks: { ...status.tasks },
+      evidence: { ...status.evidence },
+      gates: { ...status.gates },
+      time: {
+        active: { ...status.time.active },
+        deferred: { ...status.time.deferred },
+        unknownEstimateTaskIds: [...status.time.unknownEstimateTaskIds]
+      },
+      criticalPath: {
+        ...status.criticalPath,
+        path: [...status.criticalPath.path],
+        missingEstimateTaskIds: [...status.criticalPath.missingEstimateTaskIds],
+        topologicalOrder: [...status.criticalPath.topologicalOrder]
+      }
+    }
+  };
+}
+var init_public = __esm({
+  "../core/public.mjs"() {
+    init_canonical();
+    init_calculator();
+  }
+});
+
+// ../core/index.mjs
+var core_exports3 = {};
+__export(core_exports3, {
+  EVIDENCE_TIER_RANK: () => EVIDENCE_TIER_RANK,
+  MANIFEST_SCHEMA: () => MANIFEST_SCHEMA,
+  ManifestValidationError: () => ManifestValidationError,
+  calculateStatus: () => calculateStatus,
+  canonicalize: () => canonicalize,
+  createPublicProjection: () => createPublicProjection,
+  criticalPath: () => criticalPath,
+  sha256: () => sha256,
+  topologicalOrder: () => topologicalOrder,
+  validateManifest: () => validateManifest
+});
+var init_core = __esm({
+  "../core/index.mjs"() {
+    init_canonical();
+    init_calculator();
+    init_graph();
+    init_public();
+    init_schema();
+    init_validator();
+  }
+});
+
 // node_modules/@modelcontextprotocol/server/dist/chunk-Br0eD_fh.mjs
 var __create = Object.create;
 var __defProp2 = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getOwnPropNames2 = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __commonJSMin = (cb, mod) => () => (mod || cb((mod = { exports: {} }).exports, mod), mod.exports);
@@ -28,7 +1572,7 @@ var __exportAll = (all, symbols) => {
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
-    for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
+    for (var keys = __getOwnPropNames2(from), i = 0, n = keys.length, key; i < n; i++) {
       key = keys[i];
       if (!__hasOwnProp.call(to, key) && key !== except) {
         __defProp2(to, key, {
@@ -262,9 +1806,9 @@ function floatSafeRemainder(val, step) {
   return ratio - roundedRatio;
 }
 var EVALUATING = /* @__PURE__ */ Symbol("evaluating");
-function defineLazy(object2, key, getter) {
+function defineLazy(object3, key, getter) {
   let value = void 0;
-  Object.defineProperty(object2, key, {
+  Object.defineProperty(object3, key, {
     get() {
       if (value === EVALUATING) {
         return void 0;
@@ -276,7 +1820,7 @@ function defineLazy(object2, key, getter) {
       return value;
     },
     set(v) {
-      Object.defineProperty(object2, key, {
+      Object.defineProperty(object3, key, {
         value: v
         // configurable: true,
       });
@@ -2224,42 +3768,42 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
     }
     doc.write(`const newResult = {};`);
     for (const key of normalized.keys) {
-      const id = ids[key];
+      const id2 = ids[key];
       const k = esc(key);
       const schema = shape[key];
       const isOptionalIn = schema?._zod?.optin === "optional";
       const isOptionalOut = schema?._zod?.optout === "optional";
-      doc.write(`const ${id} = ${parseStr(key)};`);
+      doc.write(`const ${id2} = ${parseStr(key)};`);
       if (isOptionalIn && isOptionalOut) {
         doc.write(`
-        if (${id}.issues.length) {
+        if (${id2}.issues.length) {
           if (${k} in input) {
-            payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
+            payload.issues = payload.issues.concat(${id2}.issues.map(iss => ({
               ...iss,
               path: iss.path ? [${k}, ...iss.path] : [${k}]
             })));
           }
         }
         
-        if (${id}.value === undefined) {
+        if (${id2}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
           }
         } else {
-          newResult[${k}] = ${id}.value;
+          newResult[${k}] = ${id2}.value;
         }
         
       `);
       } else if (!isOptionalIn) {
         doc.write(`
-        const ${id}_present = ${k} in input;
-        if (${id}.issues.length) {
-          payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
+        const ${id2}_present = ${k} in input;
+        if (${id2}.issues.length) {
+          payload.issues = payload.issues.concat(${id2}.issues.map(iss => ({
             ...iss,
             path: iss.path ? [${k}, ...iss.path] : [${k}]
           })));
         }
-        if (!${id}_present && !${id}.issues.length) {
+        if (!${id2}_present && !${id2}.issues.length) {
           payload.issues.push({
             code: "invalid_type",
             expected: "nonoptional",
@@ -2268,30 +3812,30 @@ var $ZodObjectJIT = /* @__PURE__ */ $constructor("$ZodObjectJIT", (inst, def) =>
           });
         }
 
-        if (${id}_present) {
-          if (${id}.value === undefined) {
+        if (${id2}_present) {
+          if (${id2}.value === undefined) {
             newResult[${k}] = undefined;
           } else {
-            newResult[${k}] = ${id}.value;
+            newResult[${k}] = ${id2}.value;
           }
         }
 
       `);
       } else {
         doc.write(`
-        if (${id}.issues.length) {
-          payload.issues = payload.issues.concat(${id}.issues.map(iss => ({
+        if (${id2}.issues.length) {
+          payload.issues = payload.issues.concat(${id2}.issues.map(iss => ({
             ...iss,
             path: iss.path ? [${k}, ...iss.path] : [${k}]
           })));
         }
         
-        if (${id}.value === undefined) {
+        if (${id2}.value === undefined) {
           if (${k} in input) {
             newResult[${k}] = undefined;
           }
         } else {
-          newResult[${k}] = ${id}.value;
+          newResult[${k}] = ${id2}.value;
         }
         
       `);
@@ -3827,26 +5371,26 @@ function extractDefs(ctx, schema) {
     throw new Error("Unprocessed schema. This is a bug in Zod.");
   const idToSchema = /* @__PURE__ */ new Map();
   for (const entry of ctx.seen.entries()) {
-    const id = ctx.metadataRegistry.get(entry[0])?.id;
-    if (id) {
-      const existing = idToSchema.get(id);
+    const id2 = ctx.metadataRegistry.get(entry[0])?.id;
+    if (id2) {
+      const existing = idToSchema.get(id2);
       if (existing && existing !== entry[0]) {
-        throw new Error(`Duplicate schema id "${id}" detected during JSON Schema conversion. Two different schemas cannot share the same id when converted together.`);
+        throw new Error(`Duplicate schema id "${id2}" detected during JSON Schema conversion. Two different schemas cannot share the same id when converted together.`);
       }
-      idToSchema.set(id, entry[0]);
+      idToSchema.set(id2, entry[0]);
     }
   }
   const makeURI = (entry) => {
     const defsSegment = ctx.target === "draft-2020-12" ? "$defs" : "definitions";
     if (ctx.external) {
       const externalId = ctx.external.registry.get(entry[0])?.id;
-      const uriGenerator = ctx.external.uri ?? ((id2) => id2);
+      const uriGenerator = ctx.external.uri ?? ((id3) => id3);
       if (externalId) {
         return { ref: uriGenerator(externalId) };
       }
-      const id = entry[1].defId ?? entry[1].schema.id ?? `schema${ctx.counter++}`;
-      entry[1].defId = id;
-      return { defId: id, ref: `${uriGenerator("__shared")}#/${defsSegment}/${id}` };
+      const id2 = entry[1].defId ?? entry[1].schema.id ?? `schema${ctx.counter++}`;
+      entry[1].defId = id2;
+      return { defId: id2, ref: `${uriGenerator("__shared")}#/${defsSegment}/${id2}` };
     }
     if (entry[1] === root) {
       return { ref: "#" };
@@ -3894,8 +5438,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         continue;
       }
     }
-    const id = ctx.metadataRegistry.get(entry[0])?.id;
-    if (id) {
+    const id2 = ctx.metadataRegistry.get(entry[0])?.id;
+    if (id2) {
       extractToDef(entry);
       continue;
     }
@@ -3991,10 +5535,10 @@ function finalize(ctx, schema) {
   } else {
   }
   if (ctx.external?.uri) {
-    const id = ctx.external.registry.get(schema)?.id;
-    if (!id)
+    const id2 = ctx.external.registry.get(schema)?.id;
+    if (!id2)
       throw new Error("Schema is missing an `id` property");
-    result.$id = ctx.external.uri(id);
+    result.$id = ctx.external.uri(id2);
   }
   Object.assign(result, root.def ?? root.schema);
   const rootMetaId = ctx.metadataRegistry.get(schema)?.id;
@@ -7730,8 +9274,8 @@ var REF_REWRITE_NAME_MAP_KEYS = /* @__PURE__ */ new Set([
   "dependentSchemas",
   "dependencies"
 ]);
-function establishesNewBase(id) {
-  return id !== void 0 && !(typeof id === "string" && id.startsWith("#"));
+function establishesNewBase(id2) {
+  return id2 !== void 0 && !(typeof id2 === "string" && id2.startsWith("#"));
 }
 function wrapOutputSchemaForLegacy(natural) {
   const $schema = typeof natural["$schema"] === "string" ? natural["$schema"] : void 0;
@@ -13223,9 +14767,9 @@ var require_resolve = /* @__PURE__ */ __commonJSMin(((exports) => {
     }
     return count;
   }
-  function getFullPath(resolver, id = "", normalize) {
-    if (normalize !== false) id = normalizeId(id);
-    return _getFullPath(resolver, resolver.parse(id));
+  function getFullPath(resolver, id2 = "", normalize) {
+    if (normalize !== false) id2 = normalizeId(id2);
+    return _getFullPath(resolver, resolver.parse(id2));
   }
   exports.getFullPath = getFullPath;
   function _getFullPath(resolver, p) {
@@ -13233,13 +14777,13 @@ var require_resolve = /* @__PURE__ */ __commonJSMin(((exports) => {
   }
   exports._getFullPath = _getFullPath;
   const TRAILING_SLASH_HASH = /#\/?$/;
-  function normalizeId(id) {
-    return id ? id.replace(TRAILING_SLASH_HASH, "") : "";
+  function normalizeId(id2) {
+    return id2 ? id2.replace(TRAILING_SLASH_HASH, "") : "";
   }
   exports.normalizeId = normalizeId;
-  function resolveUrl(resolver, baseId, id) {
-    id = normalizeId(id);
-    return resolver.resolve(baseId, id);
+  function resolveUrl(resolver, baseId, id2) {
+    id2 = normalizeId(id2);
+    return resolver.resolve(baseId, id2);
   }
   exports.resolveUrl = resolveUrl;
   const ANCHOR = /^[a-z_][-a-z0-9._]*$/i;
@@ -13884,8 +15428,8 @@ var require_compile = /* @__PURE__ */ __commonJSMin(((exports) => {
     const refPath = (0, resolve_1._getFullPath)(this.opts.uriResolver, p);
     let baseId = (0, resolve_1.getFullPath)(this.opts.uriResolver, root.baseId, void 0);
     if (Object.keys(root.schema).length > 0 && refPath === baseId) return getJsonPointer.call(this, p, root);
-    const id = (0, resolve_1.normalizeId)(refPath);
-    const schOrRef = this.refs[id] || this.schemas[id];
+    const id2 = (0, resolve_1.normalizeId)(refPath);
+    const schOrRef = this.refs[id2] || this.schemas[id2];
     if (typeof schOrRef == "string") {
       const sch = resolveSchema.call(this, root, schOrRef);
       if (typeof (sch === null || sch === void 0 ? void 0 : sch.schema) !== "object") return;
@@ -13893,7 +15437,7 @@ var require_compile = /* @__PURE__ */ __commonJSMin(((exports) => {
     }
     if (typeof (schOrRef === null || schOrRef === void 0 ? void 0 : schOrRef.schema) !== "object") return;
     if (!schOrRef.validate) compileSchema.call(this, schOrRef);
-    if (id === (0, resolve_1.normalizeId)(ref)) {
+    if (id2 === (0, resolve_1.normalizeId)(ref)) {
       const { schema } = schOrRef;
       const { schemaId } = this.opts;
       const schId = schema[schemaId];
@@ -14320,21 +15864,21 @@ var require_fast_uri = /* @__PURE__ */ __commonJSMin(((exports, module) => {
   const { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizeComponentEncoding, isIPv4, nonSimpleDomain } = require_utils();
   const { SCHEMES, getSchemeHandler } = require_schemes();
   function normalize(uri, options) {
-    if (typeof uri === "string") uri = serialize(parse3(uri, options), options);
-    else if (typeof uri === "object") uri = parse3(serialize(uri, options), options);
+    if (typeof uri === "string") uri = serialize2(parse3(uri, options), options);
+    else if (typeof uri === "object") uri = parse3(serialize2(uri, options), options);
     return uri;
   }
   function resolve3(baseURI, relativeURI, options) {
     const schemelessOptions = options ? Object.assign({ scheme: "null" }, options) : { scheme: "null" };
     const resolved = resolveComponent(parse3(baseURI, schemelessOptions), parse3(relativeURI, schemelessOptions), schemelessOptions, true);
     schemelessOptions.skipEscape = true;
-    return serialize(resolved, schemelessOptions);
+    return serialize2(resolved, schemelessOptions);
   }
   function resolveComponent(base, relative, options, skipNormalization) {
     const target = {};
     if (!skipNormalization) {
-      base = parse3(serialize(base, options), options);
-      relative = parse3(serialize(relative, options), options);
+      base = parse3(serialize2(base, options), options);
+      relative = parse3(serialize2(relative, options), options);
     }
     options = options || {};
     if (!options.tolerant && relative.scheme) {
@@ -14378,27 +15922,27 @@ var require_fast_uri = /* @__PURE__ */ __commonJSMin(((exports, module) => {
   function equal(uriA, uriB, options) {
     if (typeof uriA === "string") {
       uriA = unescape(uriA);
-      uriA = serialize(normalizeComponentEncoding(parse3(uriA, options), true), {
+      uriA = serialize2(normalizeComponentEncoding(parse3(uriA, options), true), {
         ...options,
         skipEscape: true
       });
-    } else if (typeof uriA === "object") uriA = serialize(normalizeComponentEncoding(uriA, true), {
+    } else if (typeof uriA === "object") uriA = serialize2(normalizeComponentEncoding(uriA, true), {
       ...options,
       skipEscape: true
     });
     if (typeof uriB === "string") {
       uriB = unescape(uriB);
-      uriB = serialize(normalizeComponentEncoding(parse3(uriB, options), true), {
+      uriB = serialize2(normalizeComponentEncoding(parse3(uriB, options), true), {
         ...options,
         skipEscape: true
       });
-    } else if (typeof uriB === "object") uriB = serialize(normalizeComponentEncoding(uriB, true), {
+    } else if (typeof uriB === "object") uriB = serialize2(normalizeComponentEncoding(uriB, true), {
       ...options,
       skipEscape: true
     });
     return uriA.toLowerCase() === uriB.toLowerCase();
   }
-  function serialize(cmpts, opts) {
+  function serialize2(cmpts, opts) {
     const component = {
       host: cmpts.host,
       scheme: cmpts.scheme,
@@ -14501,7 +16045,7 @@ var require_fast_uri = /* @__PURE__ */ __commonJSMin(((exports, module) => {
     resolve: resolve3,
     resolveComponent,
     equal,
-    serialize,
+    serialize: serialize2,
     parse: parse3
   };
   module.exports = fastUri;
@@ -14761,13 +16305,13 @@ var require_core$3 = /* @__PURE__ */ __commonJSMin(((exports) => {
         for (const sch of schema) this.addSchema(sch, void 0, _meta, _validateSchema);
         return this;
       }
-      let id;
+      let id2;
       if (typeof schema === "object") {
         const { schemaId } = this.opts;
-        id = schema[schemaId];
-        if (id !== void 0 && typeof id != "string") throw new Error(`schema ${schemaId} must be string`);
+        id2 = schema[schemaId];
+        if (id2 !== void 0 && typeof id2 != "string") throw new Error(`schema ${schemaId} must be string`);
       }
-      key = (0, resolve_1.normalizeId)(key || id);
+      key = (0, resolve_1.normalizeId)(key || id2);
       this._checkUnique(key);
       this.schemas[key] = this._addSchema(schema, _meta, key, _validateSchema, true);
       return this;
@@ -14832,11 +16376,11 @@ var require_core$3 = /* @__PURE__ */ __commonJSMin(((exports) => {
         case "object": {
           const cacheKey = schemaKeyRef;
           this._cache.delete(cacheKey);
-          let id = schemaKeyRef[this.opts.schemaId];
-          if (id) {
-            id = (0, resolve_1.normalizeId)(id);
-            delete this.schemas[id];
-            delete this.refs[id];
+          let id2 = schemaKeyRef[this.opts.schemaId];
+          if (id2) {
+            id2 = (0, resolve_1.normalizeId)(id2);
+            delete this.schemas[id2];
+            delete this.refs[id2];
           }
           return this;
         }
@@ -14896,7 +16440,7 @@ var require_core$3 = /* @__PURE__ */ __commonJSMin(((exports) => {
     }
     errorsText(errors = this.errors, { separator = ", ", dataVar = "data" } = {}) {
       if (!errors || errors.length === 0) return "No errors";
-      return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text, msg) => text + separator + msg);
+      return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text2, msg) => text2 + separator + msg);
     }
     $dataMetaSchema(metaSchema, keywordsJsonPointers) {
       const rules = this.RULES.all;
@@ -14928,14 +16472,14 @@ var require_core$3 = /* @__PURE__ */ __commonJSMin(((exports) => {
       }
     }
     _addSchema(schema, meta2, baseId, validateSchema = this.opts.validateSchema, addSchema = this.opts.addUsedSchema) {
-      let id;
+      let id2;
       const { schemaId } = this.opts;
-      if (typeof schema == "object") id = schema[schemaId];
+      if (typeof schema == "object") id2 = schema[schemaId];
       else if (this.opts.jtd) throw new Error("schema must be object");
       else if (typeof schema != "boolean") throw new Error("schema must be object or boolean");
       let sch = this._cache.get(schema);
       if (sch !== void 0) return sch;
-      baseId = (0, resolve_1.normalizeId)(id || baseId);
+      baseId = (0, resolve_1.normalizeId)(id2 || baseId);
       const localRefs = resolve_1.getSchemaRefs.call(this, schema, baseId);
       sch = new compile_1.SchemaEnv({
         schema,
@@ -14952,8 +16496,8 @@ var require_core$3 = /* @__PURE__ */ __commonJSMin(((exports) => {
       if (validateSchema) this.validateSchema(schema, true);
       return sch;
     }
-    _checkUnique(id) {
-      if (this.schemas[id] || this.refs[id]) throw new Error(`schema with key or id "${id}" already exists`);
+    _checkUnique(id2) {
+      if (this.schemas[id2] || this.refs[id2]) throw new Error(`schema with key or id "${id2}" already exists`);
     }
     _compileSchemaEnv(sch) {
       if (sch.meta) this._compileMetaSchema(sch);
@@ -18373,8 +19917,8 @@ var StdioListenRouter = class {
     if (serverInfo !== void 0) this._serverInfo = serverInfo;
   }
   /** Whether `id` is an active listen subscription on this connection. */
-  has(id) {
-    return this._subs.has(id);
+  has(id2) {
+    return this._subs.has(id2);
   }
   /**
   * Serve one inbound `subscriptions/listen` request: registers the
@@ -18418,8 +19962,8 @@ var StdioListenRouter = class {
   * `true` when a subscription was removed. After this call NOTHING further
   * is delivered for that subscription id (the post-cancel hardening).
   */
-  cancel(id) {
-    return this._subs.delete(id);
+  cancel(id2) {
+    return this._subs.delete(id2);
   }
   /**
   * Route an outbound notification through the active subscriptions.
@@ -18451,13 +19995,13 @@ var StdioListenRouter = class {
   */
   teardownAll() {
     const out = [];
-    for (const id of this._subs.keys()) out.push({
+    for (const id2 of this._subs.keys()) out.push({
       jsonrpc: "2.0",
-      id,
+      id: id2,
       result: {
         resultType: "complete",
         _meta: {
-          [SUBSCRIPTION_ID_META_KEY]: id,
+          [SUBSCRIPTION_ID_META_KEY]: id2,
           ...this._serverInfo !== void 0 && { [SERVER_INFO_META_KEY]: this._serverInfo }
         }
       }
@@ -19088,7 +20632,7 @@ var Server = class extends Protocol {
       if (hasPreviousToolUse) {
         const toolUseIds = new Set(previousContent.filter((c) => c.type === "tool_use").map((c) => c.id));
         const toolResultIds = new Set(lastContent.filter((c) => c.type === "tool_result").map((c) => c.toolUseId));
-        if (toolUseIds.size !== toolResultIds.size || ![...toolUseIds].every((id) => toolResultIds.has(id))) throw new ProtocolError(ProtocolErrorCode.InvalidParams, "ids of tool_result blocks and tool_use blocks from previous message do not match");
+        if (toolUseIds.size !== toolResultIds.size || ![...toolUseIds].every((id2) => toolResultIds.has(id2))) throw new ProtocolError(ProtocolErrorCode.InvalidParams, "ids of tool_result blocks and tool_use blocks from previous message do not match");
       }
     }
     const hasTools = Boolean(params.tools || params.toolChoice);
@@ -19916,8 +21460,8 @@ var StdioConnectionChannel = class {
   }
   async send(message, options) {
     if (isJSONRPCResultResponse(message) || isJSONRPCErrorResponse(message)) {
-      const { id } = message;
-      if (id !== void 0) this._settle(id);
+      const { id: id2 } = message;
+      if (id2 !== void 0) this._settle(id2);
     }
     if (this._closed) return;
     if (this._outboundIntercept?.(message) === "handled") return;
@@ -19970,8 +21514,8 @@ var StdioConnectionChannel = class {
       this.onclose?.();
     }
   }
-  _settle(id) {
-    this._pendingRequests.delete(id);
+  _settle(id2) {
+    this._pendingRequests.delete(id2);
     if (this._pendingRequests.size === 0) this._releaseDrainWaiters();
   }
   _releaseDrainWaiters() {
@@ -20027,9 +21571,9 @@ function serveStdio(factory, options = {}) {
     } catch {
     }
   };
-  const writeErrorResponse = (id, code, message, data) => wire.send({
+  const writeErrorResponse = (id2, code, message, data) => wire.send({
     jsonrpc: "2.0",
-    id,
+    id: id2,
     error: {
       code,
       message,
@@ -20297,7 +21841,6 @@ function toError(value) {
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { isAbsolute, resolve } from "node:path";
-var CORE_MODULE_URL = new URL("../../core/index.mjs", import.meta.url);
 var corePromise;
 var ManifestAccessError = class extends Error {
   constructor(code, message, nextAction) {
@@ -20308,7 +21851,7 @@ var ManifestAccessError = class extends Error {
   }
 };
 async function coreModule() {
-  corePromise ??= import(CORE_MODULE_URL.href);
+  corePromise ??= Promise.resolve().then(() => (init_core(), core_exports3));
   return corePromise;
 }
 function resolveManifestPath(options = {}) {
@@ -20427,7 +21970,7 @@ function boundedValidationErrors(errors, limit = 50) {
 
 // src/activity-adapter.ts
 import { createHash } from "node:crypto";
-import { readFile as readFile2 } from "node:fs/promises";
+import { readFile as readFile2, readdir } from "node:fs/promises";
 import { isAbsolute as isAbsolute2, resolve as resolve2 } from "node:path";
 var MAX_ACTIVITY_FILE_CHARACTERS = 2e6;
 var MAX_ENTITIES = 1e3;
@@ -20747,6 +22290,15 @@ function configuredRuntimeDirectory(options = {}) {
 function createRuntimeActivitySource(runtimeDirectory) {
   return {
     async load() {
+      let entries = [];
+      try {
+        entries = await readdir(resolve2(runtimeDirectory, "sessions"));
+      } catch (error2) {
+        if (error2.code !== "ENOENT") throw new ActivityAccessError("activity_unreadable", "Session selection could not be read.", "Confirm runtime directory read access.");
+      }
+      if (entries.filter((name) => name.endsWith(".metadata.json")).length > 1) {
+        throw new ActivityAccessError("activity_snapshot_invalid", "Multiple RunGlance sessions require explicit selection.", "Set RUNGLANCE_ACTIVITY_FILE to the intended session snapshot, or use an isolated runtime directory.");
+      }
       try {
         return await createFileActivitySource(resolve2(runtimeDirectory, "activity-snapshot.json")).load();
       } catch (error2) {
@@ -20849,7 +22401,7 @@ var READ_ONLY_ANNOTATIONS = Object.freeze({
   idempotentHint: true,
   openWorldHint: false
 });
-var TASK_STATUSES = ["complete", "in_progress", "blocked", "not_started"];
+var TASK_STATUSES2 = ["complete", "in_progress", "blocked", "not_started"];
 var MAX_RESOURCE_CHARACTERS = 512e3;
 var MAX_ACTIVITY_RESOURCE_CHARACTERS = 128e3;
 var MAX_ACTIVITY_RESOURCE_ITEMS = 50;
@@ -20863,8 +22415,8 @@ var ErrorOutput = object({
     nextAction: string2()
   })
 });
-function success(structuredContent, text) {
-  return { content: [{ type: "text", text }], structuredContent };
+function success(structuredContent, text2) {
+  return { content: [{ type: "text", text: text2 }], structuredContent };
 }
 function failure(error2) {
   const detail = actionableError(error2);
@@ -20922,10 +22474,10 @@ function summaryOutput(manifest, calculated) {
   const audit = records(calculated.audit);
   const gates = records(calculated.gates);
   const time3 = records(calculated.time);
-  const criticalPath = records(calculated.criticalPath);
+  const criticalPath2 = records(calculated.criticalPath);
   const taskById = new Map(manifest.phases.flatMap((phase) => phase.tasks.map((task) => [task.id, task])));
-  const path = Array.isArray(criticalPath.path) ? criticalPath.path.filter((id) => typeof id === "string") : [];
-  const missing = Array.isArray(criticalPath.missingEstimateTaskIds) ? criticalPath.missingEstimateTaskIds.filter((id) => typeof id === "string") : [];
+  const path = Array.isArray(criticalPath2.path) ? criticalPath2.path.filter((id2) => typeof id2 === "string") : [];
+  const missing = Array.isArray(criticalPath2.missingEstimateTaskIds) ? criticalPath2.missingEstimateTaskIds.filter((id2) => typeof id2 === "string") : [];
   return {
     ok: true,
     initiative: {
@@ -20966,11 +22518,11 @@ function summaryOutput(manifest, calculated) {
       unknownEstimateCount: Array.isArray(time3.unknownEstimateTaskIds) ? time3.unknownEstimateTaskIds.length : 0
     },
     criticalPath: {
-      determinate: Boolean(criticalPath.determinate),
-      reason: criticalPath.reason === null ? null : String(criticalPath.reason),
-      durationHours: criticalPath.durationHours === null ? null : records(criticalPath.durationHours),
-      taskNames: path.map((id) => taskById.get(id)?.name ?? id),
-      missingEstimateTaskNames: missing.map((id) => taskById.get(id)?.name ?? id)
+      determinate: Boolean(criticalPath2.determinate),
+      reason: criticalPath2.reason === null ? null : String(criticalPath2.reason),
+      durationHours: criticalPath2.durationHours === null ? null : records(criticalPath2.durationHours),
+      taskNames: path.map((id2) => taskById.get(id2)?.name ?? id2),
+      missingEstimateTaskNames: missing.map((id2) => taskById.get(id2)?.name ?? id2)
     }
   };
 }
@@ -21017,7 +22569,7 @@ var ValidationOutput = object({
   truncated: boolean2()
 });
 var ListTasksInput = object({
-  status: _enum(TASK_STATUSES).optional().describe("Optional task status filter."),
+  status: _enum(TASK_STATUSES2).optional().describe("Optional task status filter."),
   phase_id: string2().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional().describe("Optional exact phase identifier."),
   limit: number2().int().min(1).max(100).default(25).describe("Maximum tasks to return (1-100)."),
   offset: number2().int().min(0).default(0).describe("Number of matching tasks to skip.")
@@ -21028,7 +22580,7 @@ var PublicTask = object({
   phaseId: string2(),
   phaseName: string2(),
   summary: string2(),
-  status: _enum(TASK_STATUSES),
+  status: _enum(TASK_STATUSES2),
   weight: number2(),
   earnedWeight: number2(),
   remainingHours: NumberRange.nullable(),
@@ -21188,7 +22740,7 @@ var ActivityLocksToolOutput = object({
   count: number2().int().nonnegative(),
   locks: array(ActivityLockOutput)
 }).strict();
-function taskRecords(manifest) {
+function taskRecords2(manifest) {
   return manifest.phases.flatMap((phase) => phase.tasks.map((task) => ({ ...task, phaseId: phase.id, phaseName: phase.name })));
 }
 function publicTask(task) {
@@ -21393,8 +22945,8 @@ function registerValidation(server, resolveService) {
           errors: bounded.errors,
           truncated: bounded.truncated
         };
-        const text = result.valid ? "Manifest is valid under the canonical Project Status contract." : `Manifest is invalid with ${result.errors.length} error(s). Repair the listed fields and validate again.`;
-        return success(output, text);
+        const text2 = result.valid ? "Manifest is valid under the canonical Project Status contract." : `Manifest is invalid with ${result.errors.length} error(s). Repair the listed fields and validate again.`;
+        return success(output, text2);
       } catch (error2) {
         return failure(error2);
       }
@@ -21424,7 +22976,7 @@ function registerTaskList(server, resolveService) {
             nextAction: "Call project_status_list_tasks without phase_id to inspect available phase identifiers."
           });
         }
-        const matches = taskRecords(manifest).filter((task) => (status === void 0 || task.status === status) && (phaseId === void 0 || task.phaseId === phaseId));
+        const matches = taskRecords2(manifest).filter((task) => (status === void 0 || task.status === status) && (phaseId === void 0 || task.phaseId === phaseId));
         const page = matches.slice(offset, offset + limit).map(publicTask);
         const hasMore = offset + page.length < matches.length;
         const output = {
@@ -21459,7 +23011,7 @@ function registerDependencies(server, resolveService) {
         if (!isManifestService(resolution)) return resolution;
         const service = resolution;
         const manifest = await service.loadValidated();
-        const tasks = new Map(taskRecords(manifest).map((task) => [task.id, task]));
+        const tasks = new Map(taskRecords2(manifest).map((task) => [task.id, task]));
         if (taskId !== void 0 && !tasks.has(taskId)) {
           return failure({
             code: "task_not_found",
@@ -21526,11 +23078,11 @@ function registerManifestResource(server, resolveService) {
         if (!isManifestService(resolution)) return resolution;
         const service = resolution;
         const manifest = await service.loadValidated();
-        const text = JSON.stringify(await service.publicProjection(manifest), null, 2);
-        if (text.length > MAX_RESOURCE_CHARACTERS) {
+        const text2 = JSON.stringify(await service.publicProjection(manifest), null, 2);
+        if (text2.length > MAX_RESOURCE_CHARACTERS) {
           throw new Error("Public manifest resource exceeds the 512,000-character limit. Use the paginated task and dependency tools instead.");
         }
-        return { contents: [{ uri: uri.href, mimeType: "application/json", text }] };
+        return { contents: [{ uri: uri.href, mimeType: "application/json", text: text2 }] };
       } catch (error2) {
         const detail = actionableError(error2);
         throw new Error(`${detail.message} ${detail.nextAction}`);
@@ -21564,15 +23116,15 @@ function registerActivityResource(server, activity) {
             finishedWorkTruncated: finishedWork.length < snapshot.finishedWork.length
           }
         };
-        const text = JSON.stringify(projection, null, 2);
-        if (text.length > MAX_ACTIVITY_RESOURCE_CHARACTERS) {
+        const text2 = JSON.stringify(projection, null, 2);
+        if (text2.length > MAX_ACTIVITY_RESOURCE_CHARACTERS) {
           throw {
             code: "activity_resource_too_large",
             message: "The bounded activity resource exceeds the 128,000-character limit.",
             nextAction: "Use project_status_get_activity and project_status_list_active_work with pagination instead."
           };
         }
-        return { contents: [{ uri: uri.href, mimeType: "application/json", text }] };
+        return { contents: [{ uri: uri.href, mimeType: "application/json", text: text2 }] };
       } catch (error2) {
         const detail = actionableError(error2);
         throw new Error(`${detail.code}: ${detail.message} ${detail.nextAction}`);
@@ -21584,7 +23136,7 @@ function createProjectStatusServer(options = {}) {
   const server = new McpServer(
     {
       name: "project-status-mcp-server",
-      version: "1.2.1",
+      version: "1.3.0",
       description: "Read-only access to validated Project Status readiness and optional local activity."
     },
     {

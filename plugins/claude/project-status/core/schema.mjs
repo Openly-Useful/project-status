@@ -1,3 +1,5 @@
+import { DELIVERY_SCHEMA } from "./delivery.mjs";
+
 export const TASK_STATUSES = Object.freeze(["complete", "in_progress", "blocked", "not_started"]);
 export const INITIATIVE_STATES = Object.freeze(["proposal", "active", "complete", "superseded"]);
 export const AUDIT_STATES = Object.freeze(["proposal", "current", "stale", "superseded"]);
@@ -45,6 +47,7 @@ export const MANIFEST_SCHEMA = Object.freeze({
   required: ["schemaVersion", "route", "initiative", "source", "audit", "totalWeight", "phases", "evidence", "gates", "dependencies"],
   properties: {
     schemaVersion: { const: 1 },
+    delivery: DELIVERY_SCHEMA,
     route: ROUTE_SCHEMA,
     initiative: { $ref: "#/$defs/initiative" },
     source: { $ref: "#/$defs/source" },

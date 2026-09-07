@@ -3,9 +3,17 @@ name: project-status
 description: Inspect, validate, generate, and maintain evidence-backed project readiness. Use for weighted readiness, blockers, active and deferred effort, unknown estimates, provenance checks, one-shot live monitoring, dashboard plan/apply/check workflows, repository attachment for Codex and Claude, or local Project Status plugin packaging and verification. Use the separate RunGlance skill for live agent, workflow, test, usage, lock, HUD, and run-receipt tracking.
 ---
 
-# Project Status
+# StatusGlance / Readiness
 
 Maintain one conservative source of truth for project readiness. Keep weighted scope, evidence validity, live service health, and external wait separate from RunGlance activity.
+
+Calling this skill for status means one bounded read of the canonical manifest. Reuse a known path and inspect only changed evidence; do not repeat repository discovery or launch execution. The compatible plugin/command/storage ID remains `project-status`.
+
+## Cumulative delivery stages
+
+For Alpha, Beta, and Live readiness, use the optional versioned `delivery` extension in the same manifest; read [delivery stages](references/delivery.md) before configuring it. Ordered stage scopes cumulatively reuse task IDs and weights. Readiness counts only complete tasks with qualifying current evidence and cleared gates, not activity, implementation estimates, or elapsed time. Report missing scope as unknown; never invent a denominator or add stage percentages. Preserve historical completion when current evidence expires.
+
+At requested updates and integrated milestones, show stage readiness, each active lane's known progress, next milestone, remaining task/milestone counts by stage, acceptance gaps with owner/next action, and attention items. Do not create a second tracker or a recurring model poll. Status reporting never authorizes follow-on execution; during an already authorized build, hand gaps to the active delivery loop so ready in-scope follow-ons keep moving.
 
 ## Preserve the safety boundary
 

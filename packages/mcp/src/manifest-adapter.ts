@@ -11,7 +11,6 @@ import type {
   ValidationResult,
 } from "./types.js";
 
-const CORE_MODULE_URL = new URL("../../core/index.mjs", import.meta.url);
 let corePromise: Promise<CoreModule> | undefined;
 
 class ManifestAccessError extends Error {
@@ -26,7 +25,10 @@ class ManifestAccessError extends Error {
 }
 
 async function coreModule(): Promise<CoreModule> {
-  corePromise ??= import(CORE_MODULE_URL.href) as Promise<CoreModule>;
+  // A literal import lets esbuild include core in the npm executable. The
+  // dependency-free JavaScript core has a separately maintained CoreModule API.
+  // @ts-expect-error The JavaScript core intentionally has no declaration file.
+  corePromise ??= import("../../core/index.mjs") as Promise<CoreModule>;
   return corePromise;
 }
 

@@ -1,6 +1,6 @@
 export const fallbackStatus = {
   schemaVersion: 1,
-  initiative: "Project Status Initiative",
+  initiative: "StatusGlance",
   initiativeState: "proposal",
   release: "1.0.0-local",
   source: {

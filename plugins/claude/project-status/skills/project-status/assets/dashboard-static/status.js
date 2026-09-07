@@ -42,6 +42,28 @@ function render(payload) {
   setText("gates", String(payload.externalGates.length));
   setText("manifest-digest", payload.manifestDigest);
 
+  const stages = payload.delivery?.stages ?? ["Alpha", "Beta", "Live launch"].map(name => ({ name, percent: null, remainingTasks: null, remainingMilestones: null }));
+  document.getElementById("delivery-stages").replaceChildren(...stages.map(stage => {
+    const card = document.createElement("article");
+    card.className = "phase";
+    const title = document.createElement("h3");
+    title.textContent = `${stage.name}: ${stage.percent === null ? "unknown" : `${stage.displayPercent}/100`}`;
+    const remaining = document.createElement("p");
+    remaining.textContent = `Remaining: ${stage.remainingMilestones ?? "unknown"} milestones · ${stage.remainingTasks ?? "unknown"} tasks`;
+    card.append(title);
+    if (stage.percent !== null) card.append(progress(stage.percent, `${stage.name} acceptance`));
+    card.append(remaining);
+    return card;
+  }));
+  const next = payload.delivery?.nextMilestone;
+  setText("delivery-next", next ? `Next integrated milestone: ${next.name} · ${next.remainingTasks} tasks remaining` : "Next integrated milestone not declared.");
+  const gaps = payload.delivery?.gaps;
+  document.getElementById("delivery-gaps").replaceChildren(...(gaps?.length ? gaps.map(gap => {
+    const li = document.createElement("li");
+    li.textContent = `${gap.name} → ${gap.owner.label} → ${gap.nextAction}`;
+    return li;
+  }) : [Object.assign(document.createElement("li"), { textContent: gaps ? "No current acceptance gaps in declared scope." : "Scope unknown." })]));
+
   const overall = document.getElementById("overall-progress");
   overall.setAttribute("aria-valuenow", String(payload.readiness.exact));
   overall.setAttribute("aria-valuetext", `${number.format(payload.readiness.exact)} of 100`);

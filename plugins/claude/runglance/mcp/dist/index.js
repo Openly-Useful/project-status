@@ -20272,7 +20272,7 @@ function toError(value) {
 
 // src/activity-adapter.ts
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 var MAX_ACTIVITY_FILE_CHARACTERS = 2e6;
 var MAX_ENTITIES = 1e3;
@@ -20592,6 +20592,15 @@ function configuredRuntimeDirectory(options = {}) {
 function createRuntimeActivitySource(runtimeDirectory) {
   return {
     async load() {
+      let entries = [];
+      try {
+        entries = await readdir(resolve(runtimeDirectory, "sessions"));
+      } catch (error2) {
+        if (error2.code !== "ENOENT") throw new ActivityAccessError("activity_unreadable", "Session selection could not be read.", "Confirm runtime directory read access.");
+      }
+      if (entries.filter((name) => name.endsWith(".metadata.json")).length > 1) {
+        throw new ActivityAccessError("activity_snapshot_invalid", "Multiple RunGlance sessions require explicit selection.", "Set RUNGLANCE_ACTIVITY_FILE to the intended session snapshot, or use an isolated runtime directory.");
+      }
       try {
         return await createFileActivitySource(resolve(runtimeDirectory, "activity-snapshot.json")).load();
       } catch (error2) {
@@ -21009,7 +21018,7 @@ function createRunGlanceServer(options = {}) {
   const server = new McpServer(
     {
       name: "runglance-mcp-server",
-      version: "1.2.1",
+      version: "1.3.0",
       description: "Read-only access to local RunGlance progress, work, usage, locks, and verification receipts."
     },
     {

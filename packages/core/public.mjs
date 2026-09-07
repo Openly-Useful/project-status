@@ -73,6 +73,7 @@ export function createPublicProjection(manifest, options = {}) {
       isStale: status.audit.isStale,
     },
     score: { ...status.score },
+    delivery: status.delivery,
     readiness: { exact: status.score.exactPercent, displayed: status.score.displayPercent, denominator: status.score.totalWeight },
     phases: manifest.phases.map((phase) => ({
       id: phase.id,

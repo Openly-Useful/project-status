@@ -1,6 +1,6 @@
 {
   "name": "runglance",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "Live progress for any agent, skill, test, workflow, or automation run, with the optional read-only RunGlance MCP companion.",
   "author": {
     "name": "Openly Useful",
@@ -17,7 +17,7 @@
   "publisherManifest": "https://openlyuseful.org/publisher/manifest.json",
   "openai": {
     "interface": {
-      "displayName": "RunGlance",
+      "displayName": "StatusGlance / RunGlance",
       "shortDescription": "Live progress and verified run outcomes",
       "longDescription": "Show a zero-model-call RunGlance HUD, account for workflows, skills and delegated agents, preserve truthful context and quota metrics, report explicit locks, and finish with verification-backed run receipts.",
       "developerName": "Openly Useful",

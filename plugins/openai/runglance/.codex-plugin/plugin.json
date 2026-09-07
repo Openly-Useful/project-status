@@ -18,11 +18,10 @@
       "Finish this run with a verified RunGlance receipt."
     ],
     "developerName": "Openly Useful",
-    "displayName": "RunGlance",
+    "displayName": "StatusGlance / RunGlance",
     "longDescription": "Show a zero-model-call RunGlance HUD, account for workflows, skills and delegated agents, preserve truthful context and quota metrics, report explicit locks, and finish with verification-backed run receipts.",
     "privacyPolicyURL": "https://openlyuseful.org/legal/privacy",
     "shortDescription": "Live progress and verified run outcomes",
-    "supportURL": "https://openlyuseful.org/support",
     "termsOfServiceURL": "https://openlyuseful.org/legal/terms",
     "websiteURL": "https://github.com/Openly-Useful/project-status"
   },
@@ -31,5 +30,5 @@
   "name": "runglance",
   "repository": "https://github.com/Openly-Useful/project-status",
   "skills": "./skills/",
-  "version": "1.2.1"
+  "version": "1.3.0"
 }

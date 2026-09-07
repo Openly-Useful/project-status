@@ -2,6 +2,18 @@
 
 All notable distribution changes are documented here. This project follows semantic versioning for skill and plugin artifacts.
 
+## 1.3.0 - 2026-09-07
+
+- Introduce the StatusGlance family with Readiness and RunGlance display labels; preserve all package IDs, commands, paths, repository URLs, and Apache-2.0 terms.
+- Add optional cumulative delivery stages in the existing manifest, with acceptance-only weighted readiness, remaining task/milestone counts, next milestone, and actionable gaps. Unknown scope stays unknown; expired evidence reduces current readiness without changing historical task state.
+- Make status skill invocation read-only and bounded by default. Do not start, verify, watch, or finish work merely to report status.
+- Bundle the readiness core into the npm executable so it runs without sibling source files; verify both isolated npm and plugin layouts.
+- Fix App Server message/tool agent miscounts, failed-command reporting, non-interactive swarm output, and zero-denominator progress.
+- Read saved activity state without replaying the event log; require explicit selection when multiple sessions exist.
+- Distinguish local setup metadata from host connection or observed telemetry. Correct bundled, empty, and stale snapshot labels; add stage views to the web and portable dashboards.
+- Align generated plugin interfaces with supported fields; support remains available through package metadata and the publisher support page.
+- Document integration with the bounded parallel swarm delivery loop. This release does not certify live host telemetry, fresh-agent workflow behavior, or product acceptance.
+
 ## 1.2.1 - 2026-08-23
 
 ### Changed

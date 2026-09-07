@@ -50,11 +50,19 @@ function freshnessLabel(summary) {
 
 export function formatSummary(summary, format = "text") {
   if (format === "json") return JSON.stringify(summary, null, 2);
+  const delivery = summary.delivery;
+  const deliveryLines = delivery ? [
+    "", "DELIVERY READINESS (cumulative accepted scope)",
+    ...delivery.stages.map(stage => `${stage.name}: ${stage.displayPercent === null ? "unknown" : `${stage.displayPercent}/100`} · remaining milestones ${stage.remainingMilestones} · tasks ${stage.remainingTasks ?? "unknown"}`),
+    `Next integrated milestone: ${delivery.nextMilestone ? `${delivery.nextMilestone.name} · ${delivery.nextMilestone.remainingTasks} tasks remaining` : "not declared"}`,
+    ...delivery.gaps.map(gap => `Gap: ${gap.name} → ${gap.owner.label} → ${gap.nextAction}`),
+  ] : [];
   if (format === "markdown") {
     return [
       `## ${summary.project} status`,
       "",
       `**Readiness:** ${formatNumber(summary.exactCompletion)}/100 (${summary.displayedCompletion}%)`,
+      ...deliveryLines,
       "",
       ...summary.phases.map((phase) => `- ${phase.name}: ${formatNumber(phase.earnedWeight)}/${formatNumber(phase.weight)} (${formatNumber(phase.completion)}%)`),
       "",
@@ -66,6 +74,7 @@ export function formatSummary(summary, format = "text") {
   return [
     `${String(summary.project).toUpperCase()} STATUS`,
     `READINESS ${formatNumber(summary.exactCompletion)}/100 · ${summary.displayedCompletion}%`,
+    ...deliveryLines,
     ...summary.phases.map((phase) => `${phase.name}: ${formatNumber(phase.earnedWeight)}/${formatNumber(phase.weight)} · ${formatNumber(phase.completion)}%`),
     `HANDS-ON ${formatRange(summary.activeHandsOnRemaining)} · DEFERRED ${formatRange(summary.deferredExpansion)} · UNKNOWN ESTIMATES ${summary.time.unknownEstimateTaskIds.length}`,
     `BLOCKED ${summary.blockers.length} · EXTERNAL GATES ${summary.externalGates.length}`,

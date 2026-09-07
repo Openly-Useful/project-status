@@ -1,5 +1,5 @@
 interface:
-  display_name: "Project Status"
+  display_name: "StatusGlance / Readiness"
   short_description: "Audit evidence-backed project readiness"
   default_prompt: "Use $project-status to validate this project's evidence-backed readiness, freshness, blockers, and remaining work without inferring credit from live activity."
 policy:

@@ -16,7 +16,7 @@ const mcpRequire = createRequire(new URL("../packages/mcp/package.json", import.
 const { Client } = await import(pathToFileURL(mcpRequire.resolve("@modelcontextprotocol/client")).href);
 const { StdioClientTransport } = await import(pathToFileURL(mcpRequire.resolve("@modelcontextprotocol/client/stdio")).href);
 
-test("bundled MCP starts from an isolated plugin tree without node_modules", async (t) => {
+for (const mode of ["plugin", "npm"]) test(`bundled MCP starts from an isolated ${mode} tree without node_modules`, async (t) => {
   const bundle = await readFile(sourceBundle, "utf8");
   assert.match(bundle, /^#!\/usr\/bin\/env node\n/);
   assert.doesNotMatch(bundle, /(?:from\s+|import\()["'](?:@modelcontextprotocol\/|zod(?:\/|["']))/);
@@ -31,7 +31,7 @@ test("bundled MCP starts from an isolated plugin tree without node_modules", asy
   await mkdir(dirname(isolatedManifest), { recursive: true });
   await copyFile(sourceBundle, isolatedEntry);
   await copyFile(sourceManifest, isolatedManifest);
-  for (const name of (await readdir(sourceCore)).filter((entry) => entry.endsWith(".mjs"))) {
+  for (const name of (mode === "plugin" ? await readdir(sourceCore) : []).filter((entry) => entry.endsWith(".mjs"))) {
     await copyFile(join(sourceCore, name), join(pluginRoot, "core", name));
   }
   assert.equal(existsSync(join(pluginRoot, "node_modules")), false);

@@ -482,7 +482,7 @@ export function renderActivity(snapshot, {
   else if (safeWidth < 100) compact = `${state} · ${bar} · ${counts} · ${context} ${quota} · ${elapsed} · ${live}`;
   else compact = `${state} · ${bar} · Workflows ${snapshot.counts.workflows} · Skills ${snapshot.counts.skills} · Agents ${snapshot.counts.agents} · Context ${metricLabel(snapshot.usage.contextRemainingPercent, "").replace("—", "—")} left · Quota ${metricLabel(snapshot.usage.quotaRemainingPercent, "").replace("—", "—")} left · ${elapsed} · Live ${snapshot.freshness.ageSeconds ?? "—"}s`;
   compact = truncate(compact, safeWidth);
-  if (preset === "compact" || !isTTY) return compact;
+  if (preset === "compact" || (!isTTY && preset !== "swarm")) return compact;
 
   const active = snapshot.entities.filter((entity) => ACTIVE_STATES.has(entity.state));
   if (preset === "standard") {
@@ -495,7 +495,7 @@ export function renderActivity(snapshot, {
   if (preset === "swarm") {
     const agents = snapshot.entities.filter((entity) => entity.kind === "agent");
     const rows = agents.length === 0 ? ["Agents —"] : agents.map((agent) => {
-      const agentProgress = agent.progress ? progressBar({ mode: "determinate", ...agent.progress, percent: Math.round((agent.progress.completed / Math.max(1, agent.progress.total)) * 1_000) / 10 }, { ascii, cells: 8 }) : "[working]";
+      const agentProgress = agent.progress?.total > 0 ? progressBar({ mode: "determinate", ...agent.progress, percent: Math.round((agent.progress.completed / agent.progress.total) * 1_000) / 10 }, { ascii, cells: 8 }) : "[unknown]";
       return truncate(`${stateLabel(agent.state).padEnd(9)} ${agentProgress} ${agent.name ?? agent.id}`, safeWidth);
     });
     return [compact, ...rows].join("\n");

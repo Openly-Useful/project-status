@@ -2,9 +2,27 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { createPublicProjection } from "../packages/core/index.mjs";
-import { mergeStatus } from "../src/status-adapter.js";
+import { mergeStatus, evidenceLabel } from "../src/status-adapter.js";
 
 const manifest = JSON.parse(await readFile(new URL("../.project-status/manifest.json", import.meta.url), "utf8"));
+
+test("bundled, empty, expired and stale snapshots never claim fresh evidence", () => {
+  const current = { audit: { verificationState: "current", staleAt: "2026-09-08T00:00:00.000Z" }, evidenceSummary: { total: 1, stale: 0 } };
+  const now = Date.parse("2026-09-07T00:00:00.000Z");
+  assert.equal(evidenceLabel(current, "fallback", now), "Bundled snapshot");
+  assert.equal(evidenceLabel(current, "loaded", now), "Snapshot current");
+  assert.equal(evidenceLabel(current, "loaded", now + 172800000), "Review needed");
+  assert.equal(evidenceLabel({ ...current, evidenceSummary: { total: 0, stale: 0 } }, "loaded", now), "No evidence");
+  assert.equal(evidenceLabel({ ...current, audit: { verificationState: "stale_audit" } }, "loaded", now), "Review needed");
+});
+
+test("dashboard keeps optional delivery scope and does not invent it", () => {
+  const projection = createPublicProjection(manifest, { now: manifest.audit.evidenceAsOf });
+  projection.delivery = { schemaVersion: 1, stages: [{ id: "alpha", percent: 25 }] };
+  assert.deepEqual(mergeStatus(projection, null).delivery, projection.delivery);
+  delete projection.delivery;
+  assert.equal(mergeStatus(projection, null).delivery, null);
+});
 
 test("dashboard adapter consumes the canonical public projection without losing score or phase credit", () => {
   const projection = createPublicProjection(manifest, { now: new Date(manifest.audit.evidenceAsOf) });

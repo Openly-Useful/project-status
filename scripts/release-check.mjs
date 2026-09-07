@@ -119,7 +119,7 @@ function validatePluginManifest(value, host, version, mcpIncluded, errors, metad
   if (mcpIncluded && value?.mcpServers !== "./.mcp.json") errors.push(`${host} plugin manifest mcpServers must target ./.mcp.json`);
   if (!mcpIncluded && "mcpServers" in (value ?? {})) errors.push(`${host} plugin manifest cannot declare MCP without a built companion`);
   if (host === "openai") {
-    const required = ["capabilities", "category", "defaultPrompt", "developerName", "displayName", "longDescription", "privacyPolicyURL", "shortDescription", "supportURL", "termsOfServiceURL", "websiteURL"];
+    const required = ["capabilities", "category", "defaultPrompt", "developerName", "displayName", "longDescription", "privacyPolicyURL", "shortDescription", "termsOfServiceURL", "websiteURL"];
     exactKeys(value?.interface, required, "OpenAI plugin interface", errors);
     for (const key of required.filter((key) => key !== "capabilities" && key !== "defaultPrompt")) {
       nonEmptyString(value?.interface?.[key], `OpenAI plugin interface.${key}`, errors);
@@ -135,7 +135,6 @@ function validatePluginManifest(value, host, version, mcpIncluded, errors, metad
       websiteURL: metadata?.homepage,
       privacyPolicyURL: metadata?.privacy,
       termsOfServiceURL: metadata?.terms,
-      supportURL: metadata?.support,
     };
     for (const [field, expected] of Object.entries(urls)) {
       if (value?.interface?.[field] !== expected) errors.push(`OpenAI plugin interface.${field} differs from canonical metadata`);
